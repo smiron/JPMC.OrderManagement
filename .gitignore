@@ -3,3 +3,4 @@ src/**/bin
 src/**/obj
 **/*.csproj.user
 cdk.out
+.idea/

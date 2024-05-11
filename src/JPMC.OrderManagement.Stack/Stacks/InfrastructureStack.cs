@@ -1,10 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Amazon.CDK.AWS.IAM;
+using Microsoft.Extensions.Configuration;
 
 using Constructs;
 using Amazon.CDK.AWS.Lambda;
 using Amazon.CDK.AWS.Logs;
 
 using AmazonCDK = Amazon.CDK;
+using DDB = Amazon.CDK.AWS.DynamoDB;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
@@ -12,10 +14,10 @@ internal class InfrastructureStack : AmazonCDK.Stack
 {
     private readonly AppSettings _appSettings;
 
-    internal InfrastructureStack(Construct scope)
+    internal InfrastructureStack(Construct scope, AmazonCDK.IStackProps? stackProps = null)
         : base(scope, 
             $"{Constants.SolutionName}.{nameof(InfrastructureStack)}".Replace(".", "-"),
-            new AmazonCDK.StackProps())
+            stackProps)
     {
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", false, true)
@@ -28,50 +30,91 @@ internal class InfrastructureStack : AmazonCDK.Stack
                 options.ErrorOnUnknownConfiguration = true;
             })!;
 
-        //var fn = new Function(this, functionId, new FunctionProps
-        //{
-        //    FunctionName = $"{_appSettings.Environment}-{functionId}",
-        //    Runtime = Runtime.DOTNET_6,
-        //    Architecture = Architecture.X86_64,
-        //    MemorySize = 256,
-        //    Environment = new Dictionary<string, string>
-        //            {
-        //                {
-        //                    Constants.EnvironmentVariableName, _appSettings.Environment
-        //                },
-        //                {
-        //                    "POWERTOOLS_SERVICE_NAME", functionId
-        //                },
-        //                {
-        //                    "POWERTOOLS_LOG_LEVEL", "Info"
-        //                },
-        //                {
-        //                    "POWERTOOLS_LOGGER_LOG_EVENT", "true"
-        //                },
-        //                {
-        //                    "POWERTOOLS_LOGGER_CASE", "CamelCase"
-        //                },
-        //                {
-        //                    "POWERTOOLS_LOGGER_SAMPLE_RATE", "1"
-        //                }
-        //            },
+        var functionId = "order-management";
+        
+        var ddbTable = new DDB.Table(this, "order-management-data", new DDB.TableProps
+        {
+            TableName = $"{_appSettings.Environment}.{Constants.SolutionName.ToLower()}",
+            PartitionKey = new DDB.Attribute
+            {
+                Name = "PK",
+                Type = DDB.AttributeType.STRING
+            },
+            SortKey = new DDB.Attribute
+            {
+                Name = "SK",
+                Type = DDB.AttributeType.STRING
+            },
+            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY,
+            Encryption = DDB.TableEncryption.AWS_MANAGED,
+            BillingMode = DDB.BillingMode.PROVISIONED,
+            ReadCapacity = 1,
+            WriteCapacity = 1,
+            PointInTimeRecovery = false,
+            DeletionProtection = true,
+            ContributorInsightsEnabled = false,
+            TimeToLiveAttribute = "TTL",
+            TableClass = DDB.TableClass.STANDARD
+        });
 
-        //    Timeout = AmazonCDK.Duration.Seconds(60),
-        //    LogRetention = RetentionDays.ONE_WEEK,
+        var fn = new Function(this, functionId, new FunctionProps
+        {
+            FunctionName = $"{_appSettings.Environment}-{functionId}",
+            Runtime = Runtime.DOTNET_8,
+            Architecture = Architecture.X86_64,
+            MemorySize = 512,
+            Environment = new Dictionary<string, string>
+            {
+                {
+                    Constants.EnvironmentVariableName, _appSettings.Environment
+                },
+                {
+                    "POWERTOOLS_SERVICE_NAME", functionId
+                },
+                {
+                    "POWERTOOLS_LOG_LEVEL", "Info"
+                },
+                {
+                    "POWERTOOLS_LOGGER_LOG_EVENT", "true"
+                },
+                {
+                    "POWERTOOLS_LOGGER_CASE", "CamelCase"
+                },
+                {
+                    "POWERTOOLS_LOGGER_SAMPLE_RATE", "1"
+                }
+            },
 
-        //    // functions using top level statements can just specify the main DLL name as the handler
-        //    Handler = lambdaFunctionDirectory,
-        //    Code = Code.FromDockerBuild(_appSettings.SourceDirectory, new DockerBuildAssetOptions
-        //    {
-        //        Platform = "linux/amd64",
-        //        ImagePath = "/app/publish",
-        //        TargetStage = "publish",
-        //        File = Path.Combine(".", lambdaFunction.Name, "Dockerfile"),
-        //        BuildArgs = new Dictionary<string, string>
-        //                {
-        //                    { "mainProject", lambdaFunction.Name }
-        //                }
-        //    })
-        //});
+            Timeout = AmazonCDK.Duration.Seconds(5),
+            LogRetention = RetentionDays.ONE_WEEK,
+
+            // functions using top level statements can just specify the main DLL name as the handler
+            Handler = "JPMC.OrderManagement.Lambda",
+            
+            Code = Code.FromDockerBuild("src", new DockerBuildAssetOptions
+            {
+                Platform = "linux/amd64",
+                ImagePath = "/app/publish",
+                TargetStage = "publish",
+                File = Path.Combine(".", "JPMC.OrderManagement.Lambda", "Dockerfile"),
+                BuildArgs = new Dictionary<string, string>
+                {
+                    { "mainProject", "JPMC.OrderManagement.Lambda" }
+                }
+            })
+        });
+        
+        ddbTable.GrantReadWriteData(fn.GrantPrincipal);
+        
+        fn.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps
+        {
+            Sid = "DynamoDBDeny",
+            Actions = new[]
+            {
+                "dynamodb:Scan"
+            },
+            Effect = Effect.DENY,
+            Resources = new[] { "*" }
+        }));
     }
 }
