@@ -1,20 +1,25 @@
 using System.Net;
-using System.Text.Json;
+using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
-var dynamoDbContext = new DynamoDBContext(new AmazonDynamoDBClient(), new DynamoDBContextConfig
-{
-    TableNamePrefix = "dev.",
-    SkipVersionCheck = true,
-    DisableFetchingTableMetadata = true
-});
-var orderTable = dynamoDbContext.GetTargetTable<Order>();
+var dynamoDbContext = new DynamoDBContext(
+    new AmazonDynamoDBClient(new AmazonDynamoDBConfig
+    {
+        RegionEndpoint = RegionEndpoint.EUWest2
+    }),
+    new DynamoDBContextConfig
+    {
+        TableNamePrefix = "dev.",
+        SkipVersionCheck = true,
+        DisableFetchingTableMetadata = true
+    });
 
 await LambdaBootstrapBuilder.Create<APIGatewayProxyRequest>(Handler, new DefaultLambdaJsonSerializer())
     .Build()
@@ -24,28 +29,36 @@ async Task<APIGatewayProxyResponse> Handler(APIGatewayProxyRequest request, ILam
 {
     try
     {
+        var order = await dynamoDbContext.LoadAsync<Order>("order#1", "order#1");
 
-        context.Logger.LogInformation($"Received request: {JsonSerializer.Serialize(request)}");
+        context.Logger.LogInformation($"Retrieved order: {JsonConvert.SerializeObject(order)}");
 
-        var order = await orderTable.GetItemAsync(new Primitive("order#1"), new Primitive("order#1"));
-
-        context.Logger.LogInformation($"retrieved order: {JsonSerializer.Serialize(order)}");
-
-        return order == null
-            ? new APIGatewayProxyResponse
+        if (order == null)
+        {
+            return new APIGatewayProxyResponse
             {
                 StatusCode = (int)HttpStatusCode.NotFound
-            }
-            : new APIGatewayProxyResponse
-            {
-                StatusCode = (int)HttpStatusCode.OK,
-                Body = JsonSerializer.Serialize(order)
             };
+        }
+
+        return new APIGatewayProxyResponse
+        {
+            StatusCode = (int)HttpStatusCode.OK,
+            Body = JsonConvert.SerializeObject(order),
+            Headers = new Dictionary<string, string>
+            {
+                { "Content-Type", "application/json" }
+            }
+        };
     }
     catch (Exception ex)
     {
         context.Logger.LogError($"Error message: {ex.Message}, Error: {ex}");
-        throw;
+        return new APIGatewayProxyResponse
+        {
+            StatusCode = (int)HttpStatusCode.InternalServerError,
+            Body = JsonConvert.SerializeObject(new { message = ex.Message })
+        };
     }
 };
 

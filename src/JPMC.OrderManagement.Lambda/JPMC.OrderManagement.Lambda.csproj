@@ -1,25 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>12</LangVersion>
-    </PropertyGroup>
+  <PropertyGroup>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net8.0</TargetFramework>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<Nullable>enable</Nullable>
+	<LangVersion>12</LangVersion>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <Content Include="..\.dockerignore">
-            <Link>.dockerignore</Link>
-        </Content>
-    </ItemGroup>
+  <ItemGroup>
+	<Content Include="..\.dockerignore">
+	  <Link>.dockerignore</Link>
+	</Content>
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Amazon.Lambda.APIGatewayEvents" Version="2.7.0" />
-        <PackageReference Include="Amazon.Lambda.Core" Version="2.2.0" />
-        <PackageReference Include="Amazon.Lambda.RuntimeSupport" Version="1.10.0"/>
-        <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.0"/>
-        <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.303.4" />
-    </ItemGroup>
+  <ItemGroup>
+	<PackageReference Include="Amazon.Lambda.APIGatewayEvents" Version="2.7.0" />
+	<PackageReference Include="Amazon.Lambda.Core" Version="2.2.0" />
+	<PackageReference Include="Amazon.Lambda.RuntimeSupport" Version="1.10.0" />
+	<PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.4.3" />
+	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.303.4" />
+	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
 
 </Project>

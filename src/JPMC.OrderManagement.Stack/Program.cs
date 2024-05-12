@@ -2,6 +2,7 @@
 
 using Amazon.CDK;
 using JPMC.OrderManagement.Stack.Stacks;
+using JPMC.OrderManagement.Utils;
 
 using CdkTags = Amazon.CDK.Tags;
 using Environment = Amazon.CDK.Environment;
@@ -14,7 +15,7 @@ static class Program
     {
         var configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", false, true)
-            .AddEnvironmentVariables(source => source.Prefix = "JPMC_")
+            .AddEnvironmentVariables(source => source.Prefix = Constants.ComputeEnvironmentVariablesPrefix)
             .Build();
 
         var appSettings = configuration
@@ -22,7 +23,7 @@ static class Program
             {
                 options.ErrorOnUnknownConfiguration = true;
             })!;
-        
+
         var app = new App();
 
         var stackProps = new StackProps
