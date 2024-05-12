@@ -1,4 +1,4 @@
-﻿namespace JPMC.OrderManagement.Lambda2;
+﻿namespace JPMC.OrderManagement.Lambda;
 
 public class AppSettings
 {

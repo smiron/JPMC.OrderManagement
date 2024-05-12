@@ -6,7 +6,7 @@ using AWS.Lambda.Powertools.Logging;
 using JPMC.OrderManagement.LambdaHandler;
 using Newtonsoft.Json;
 
-namespace JPMC.OrderManagement.Lambda2;
+namespace JPMC.OrderManagement.Lambda;
 
 // ReSharper disable once ClassNeverInstantiated.Global
 public class AddOrderHandler(IDynamoDBContext dynamoDbContext)
