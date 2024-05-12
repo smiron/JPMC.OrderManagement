@@ -85,7 +85,7 @@ internal class InfrastructureStack : AmazonCDK.Stack
                 }
             },
 
-            Timeout = AmazonCDK.Duration.Seconds(5),
+            Timeout = AmazonCDK.Duration.Seconds(30),
             LogRetention = RetentionDays.ONE_WEEK,
 
             // functions using top level statements can just specify the main DLL name as the handler

@@ -10,14 +10,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.Stack", "src\JPMC.OrderManagement.Stack\JPMC.OrderManagement.Stack.csproj", "{E4F720B3-4051-4F89-A10D-AB591CC265EC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{5572632B-725D-47EB-BBF9-9A8C89316400}"
-	ProjectSection(SolutionItems) = preProject
-		.dockerignore = src/.dockerignore
-		.gitignore = .gitignore
-		cdk.json = cdk.json
-		README.md = README.md
-	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JPMC.OrderManagement.Lambda", "src\JPMC.OrderManagement.Lambda\JPMC.OrderManagement.Lambda.csproj", "{53359681-BB21-4D63-A8A7-5B1607AECA64}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.Lambda", "src\JPMC.OrderManagement.Lambda\JPMC.OrderManagement.Lambda.csproj", "{53359681-BB21-4D63-A8A7-5B1607AECA64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
