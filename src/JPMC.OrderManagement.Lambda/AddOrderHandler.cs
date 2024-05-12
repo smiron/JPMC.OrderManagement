@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using AWS.Lambda.Powertools.Logging;
+using AWS.Lambda.Powertools.Tracing;
 using JPMC.OrderManagement.LambdaHandler;
 using Newtonsoft.Json;
 
@@ -29,6 +30,7 @@ public class AddOrderHandler(IDynamoDBContext dynamoDbContext)
         };
     }
 
+    [Tracing(SegmentName = "Handle Internal")]
     protected override async Task<APIGatewayProxyResponse> HandleInternal(
         APIGatewayProxyRequest command,
         ILambdaContext context)
@@ -37,7 +39,7 @@ public class AddOrderHandler(IDynamoDBContext dynamoDbContext)
 
         try
         {
-            var order = await _dynamoDbContext.LoadAsync<Order>("order#1", "order#1", _dynamoDbOperationConfig);
+            var order = await GetOrder(1);
 
             Logger.LogInformation("Retrieved order: {order}", order);
 
@@ -68,6 +70,12 @@ public class AddOrderHandler(IDynamoDBContext dynamoDbContext)
                 Body = JsonConvert.SerializeObject(new { message = ex.Message })
             };
         }
+    }
+
+    [Tracing(SegmentName = "Get Order")]
+    private async Task<Order?> GetOrder(int id)
+    {
+        return await _dynamoDbContext.LoadAsync<Order>($"order#{id}", $"order#{id}", _dynamoDbOperationConfig);
     }
 
     [DynamoDBTable("jpmc.ordermanagement")]

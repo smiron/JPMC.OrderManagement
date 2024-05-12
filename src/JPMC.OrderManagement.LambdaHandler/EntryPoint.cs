@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
+using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using JPMC.OrderManagement.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,8 @@ public static class EntryPoint
         where THandler : class, IHandler<TCommand, TOutput, TAppSettings>
         where TAppSettings : new()
     {
+        AWSSDKHandler.RegisterXRayForAllServices();
+
         var configurationBuilder = new ConfigurationBuilder()
             .AddEnvironmentVariables(Constants.ComputeEnvironmentVariablesPrefix);
             //.AddSystemsManager($"/{Constants.SolutionName}/{Environment.GetEnvironmentVariable(Constants.EnvironmentVariableName)}/", false);

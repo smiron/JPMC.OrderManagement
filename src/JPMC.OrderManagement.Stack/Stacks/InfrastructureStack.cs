@@ -80,6 +80,12 @@ internal class InfrastructureStack : AmazonCDK.Stack
                 },
                 {
                     "POWERTOOLS_LOGGER_SAMPLE_RATE", "1"
+                },
+                {
+                    "POWERTOOLS_TRACER_CAPTURE_RESPONSE", "true"
+                },
+                {
+                    "POWERTOOLS_TRACER_CAPTURE_ERROR", "true"
                 }
             },
 
@@ -99,7 +105,9 @@ internal class InfrastructureStack : AmazonCDK.Stack
                 {
                     { "mainProject", "JPMC.OrderManagement.Lambda" }
                 }
-            })
+            }),
+
+            Tracing = Tracing.ACTIVE
         });
 
         ddbTable.GrantReadWriteData(addOrderFunction.GrantPrincipal);

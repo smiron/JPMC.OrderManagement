@@ -1,5 +1,6 @@
 ﻿using Amazon.Lambda.Core;
 using AWS.Lambda.Powertools.Logging;
+using AWS.Lambda.Powertools.Tracing;
 
 namespace JPMC.OrderManagement.LambdaHandler;
 
@@ -28,6 +29,7 @@ public abstract class LambdaHandlerBase<TInput, TOutput, TAppSettings> : IHandle
     }
 
     [Logging(LogEvent = true)]
+    [Tracing(SegmentName = "Handle")]
     public async Task<TOutput> Handle(TInput command, ILambdaContext context)
     {
         if (!_isInitialized)
