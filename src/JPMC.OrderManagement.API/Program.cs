@@ -1,13 +1,16 @@
-using System.Diagnostics;
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.XRay.Recorder.Core;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using AWS.Logger;
 using JPMC.OrderManagement.Utils;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
+
+using ApiModels = JPMC.OrderManagement.API.ApiModels;
+using DataModels = JPMC.OrderManagement.API.DataModels;
 
 var swaggerDocumentTitle = $"{Constants.System}API";
 var swaggerDocumentVersion = "v1";
@@ -86,6 +89,8 @@ app.UsePathBase(new PathString("/api"));
 
 app.UseHttpLogging();
 
+app.MapHealthChecks("/health");
+
 if (app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment("dev")
     || app.Environment.IsEnvironment("local"))
@@ -100,50 +105,85 @@ if (app.Environment.IsDevelopment()
     });
 }
 
-app.MapGet(
-    "/orders/{id:int}", async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
-    {
-        var stopwatch = new Stopwatch();
-        stopwatch.Start();
-        var order = await dynamoDbContext.LoadAsync<Order>($"order#{id}", $"order#{id}");
-        stopwatch.Stop();
-        logger.LogInformation("DynamoDB time: {DynamoDBTime}", stopwatch.ElapsedMilliseconds);
+// TODO: Add a service (CRUD Order) and inject it here.
 
-        return order;
+// read orders
+app.MapGet(
+    "/orders/{id:int}",
+    async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    {
+        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"order#{id}", $"order#{id}");
+
+        return order == null
+            ? Results.NotFound()
+            : Results.Ok(new ApiModels.Order
+            {
+                Id = order.Id,
+                Symbol = order.Symbol,
+                Side = order.Side,
+                Amount = order.Amount,
+                Price = order.Price
+            });
     });
 
-app.MapHealthChecks("/health");
+// create orders
+app.MapPost(
+    "/orders/{id:int}",
+    async (int id, [FromBody] ApiModels.Order order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    {
+        // TODO: create if not exists
+        await dynamoDbContext.SaveAsync(
+            new DataModels.Order
+            {
+                Id = id,
+                Symbol = order.Symbol,
+                Side = order.Side,
+                Amount = order.Amount,
+                Price = order.Price,
+                EntityType = "ORDER",
+                Pk = $"ORDER#{id}",
+                Sk = $"ORDER#{id}",
+                Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
+                Gsi1Price = order.Price
+            },
+            new DynamoDBOperationConfig
+            {
+                
+            });
+
+        return Results.Created();
+    });
+
+// update orders
+app.MapPut(
+    "/orders/{id:int}",
+    async (int id, [FromBody] ApiModels.Order order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    {
+        await dynamoDbContext.SaveAsync(new DataModels.Order
+        {
+            Id = id,
+            Symbol = order.Symbol,
+            Side = order.Side,
+            Amount = order.Amount,
+            Price = order.Price,
+            EntityType = "ORDER",
+            Pk = $"ORDER#{id}",
+            Sk = $"ORDER#{id}",
+            Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
+            Gsi1Price = order.Price
+        });
+
+        return Results.Ok();
+    });
+
+// delete orders
+app.MapDelete(
+    "/orders/{id:int}",
+    async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    {
+        await dynamoDbContext.DeleteAsync<DataModels.Order>($"ORDER#{id}", $"ORDER#{id}");
+
+        return Results.Ok();
+    });
 
 app.Run();
-
-[DynamoDBTable("jpmc.ordermanagement")]
-public record Order
-{
-    [DynamoDBHashKey] public string PK { get; set; } = null!;
-
-    [DynamoDBRangeKey] public string SK { get; set; } = null!;
-
-    [DynamoDBVersion] public int? Version { get; set; }
-
-    [DynamoDBProperty] public string EntityType { get; set; } = null!;
-
-    [DynamoDBProperty] public int ID { get; set; }
-
-    [DynamoDBProperty] public string Symbol { get; set; } = null!;
-
-    [DynamoDBProperty] public Side Side { get; set; }
-
-    [DynamoDBProperty] public int Amount { get; set; }
-
-    [DynamoDBProperty] public int Price { get; set; }
-
-    [DynamoDBProperty] public DateTime CreateTimestamp { get; set; } = DateTime.UtcNow;
-
-    [DynamoDBProperty] public DateTime? UpdateTimestamp { get; set; }
-}
-
-public enum Side
-{
-    Buy,
-    Sell
-}
