@@ -2,7 +2,11 @@ using System.Diagnostics;
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.XRay.Recorder.Core;
+using Amazon.XRay.Recorder.Handlers.AwsSdk;
+using AWS.Logger;
 using JPMC.OrderManagement.Utils;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 
 const string swaggerDocumentTitle = "OrderManagementAPI";
@@ -15,6 +19,9 @@ var configuration = new ConfigurationBuilder()
 
 var awsOptions = configuration.GetAWSOptions();
 awsOptions.Region = RegionEndpoint.EUWest2;
+
+AWSXRayRecorder.InitializeInstance(configuration);
+AWSSDKHandler.RegisterXRayForAllServices();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -41,10 +48,31 @@ builder.Services
         config.Title = $"{swaggerDocumentTitle} {swaggerDocumentVersion}";
         config.Version = swaggerDocumentVersion;
     })
-    .AddLogging()
+    .AddLogging(loggingBuilder => loggingBuilder
+        .AddAWSProvider(new AWSLoggerConfig
+        {
+            DisableLogGroupCreation = true,
+            Region = "eu-west-2",
+            LogGroup = "/ecs/jpmc-order-management-api",
+            LogStreamNamePrefix = "ecs"
+        }))
+    .AddHttpLogging(options =>
+    {
+        options.CombineLogs = true;
+        options.LoggingFields = HttpLoggingFields.Duration
+                                | HttpLoggingFields.RequestPath
+                                | HttpLoggingFields.RequestMethod
+                                | HttpLoggingFields.RequestProtocol
+                                | HttpLoggingFields.RequestScheme
+                                | HttpLoggingFields.ResponseStatusCode;
+    })
     .AddHealthChecks();
 
 var app = builder.Build();
+
+app.UsePathBase(new PathString("/api"));
+
+app.UseHttpLogging();
 
 if (app.Environment.IsDevelopment())
 {

@@ -24,3 +24,6 @@ TODO:
 - Consider DR strategy
 - CI/CD
 - Cost estimate
+- Deletion protection where possible
+- point-in-time recovery for the data store
+- Configure CloudWatch Logs logging via configuration keys
