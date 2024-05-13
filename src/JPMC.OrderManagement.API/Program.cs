@@ -9,19 +9,26 @@ using JPMC.OrderManagement.Utils;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 
-const string swaggerDocumentTitle = "OrderManagementAPI";
-const string swaggerDocumentVersion = "v1";
+var swaggerDocumentTitle = $"{Constants.System}API";
+var swaggerDocumentVersion = "v1";
 
 var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", false, false)
     .AddEnvironmentVariables(Constants.ComputeEnvironmentVariablesPrefix)
-    .AddJsonFile("appsettings.json", false, true)
     .Build();
 
+var xrayEnable = configuration.GetValue<bool>("XRay:Enable");
+var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
+
 var awsOptions = configuration.GetAWSOptions();
+// TODO: remove region
 awsOptions.Region = RegionEndpoint.EUWest2;
 
-AWSXRayRecorder.InitializeInstance(configuration);
-AWSSDKHandler.RegisterXRayForAllServices();
+if (xrayEnable)
+{
+    AWSXRayRecorder.InitializeInstance(configuration);
+    AWSSDKHandler.RegisterXRayForAllServices();    
+}
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
@@ -48,14 +55,18 @@ builder.Services
         config.Title = $"{swaggerDocumentTitle} {swaggerDocumentVersion}";
         config.Version = swaggerDocumentVersion;
     })
-    .AddLogging(loggingBuilder => loggingBuilder
-        .AddAWSProvider(new AWSLoggerConfig
-        {
-            DisableLogGroupCreation = true,
-            Region = "eu-west-2",
-            LogGroup = "/ecs/jpmc-order-management-api",
-            LogStreamNamePrefix = "ecs"
-        }))
+    .AddLogging(loggingBuilder =>
+    {
+        if (!cloudWatchLogsEnable) 
+            return;
+
+        loggingBuilder
+            .AddAWSProvider(new AWSLoggerConfig
+            {
+                Region = awsOptions.Region.SystemName,
+                LogGroup = $"/{Constants.Owner}/{Constants.System}/api"
+            });
+    })
     .AddHttpLogging(options =>
     {
         options.CombineLogs = true;
@@ -64,7 +75,8 @@ builder.Services
                                 | HttpLoggingFields.RequestMethod
                                 | HttpLoggingFields.RequestProtocol
                                 | HttpLoggingFields.RequestScheme
-                                | HttpLoggingFields.ResponseStatusCode;
+                                | HttpLoggingFields.ResponseStatusCode
+                                | HttpLoggingFields.RequestQuery;
     })
     .AddHealthChecks();
 

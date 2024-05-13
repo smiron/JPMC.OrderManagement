@@ -36,7 +36,8 @@ static class Program
 
         var infrastructureStack = new InfrastructureStack(app, stackProps);
 
-        CdkTags.Of(infrastructureStack).Add("user:solution", Constants.SolutionName);
+        CdkTags.Of(infrastructureStack).Add($"user:{nameof(Constants.Owner)}", Constants.Owner);
+        CdkTags.Of(infrastructureStack).Add($"user:{nameof(Constants.System)}", Constants.System);
 
         app.Synth();
     }

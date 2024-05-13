@@ -14,7 +14,7 @@ internal class InfrastructureStack : AmazonCDK.Stack
 {
     internal InfrastructureStack(Construct scope, AmazonCDK.IStackProps? stackProps = null)
         : base(scope, 
-            $"{Constants.SolutionName}.{nameof(InfrastructureStack)}".Replace(".", "-"),
+            $"{Constants.Owner}-{Constants.System}-{nameof(InfrastructureStack)}",
             stackProps)
     {
         var configuration = new ConfigurationBuilder()
