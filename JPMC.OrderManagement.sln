@@ -10,6 +10,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.Stack", "src\JPMC.OrderManagement.Stack\JPMC.OrderManagement.Stack.csproj", "{E4F720B3-4051-4F89-A10D-AB591CC265EC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{5572632B-725D-47EB-BBF9-9A8C89316400}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		cdk.json = cdk.json
+		global.json = global.json
+		README.md = README.md
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.LambdaHandler", "src\JPMC.OrderManagement.LambdaHandler\JPMC.OrderManagement.LambdaHandler.csproj", "{718B1D9C-9ECD-4B43-9ECD-0956E9724A02}"
 EndProject

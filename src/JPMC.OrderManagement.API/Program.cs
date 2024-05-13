@@ -1,18 +1,48 @@
-using NSwag.AspNetCore;
-
-using JPMC.OrderManagement.API.Models;
+using System.Diagnostics;
+using Amazon;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
+using JPMC.OrderManagement.Utils;
+using Microsoft.AspNetCore.Mvc;
 
 const string swaggerDocumentTitle = "OrderManagementAPI";
 const string swaggerDocumentVersion = "v1";
 
+var configuration = new ConfigurationBuilder()
+    .AddEnvironmentVariables(Constants.ComputeEnvironmentVariablesPrefix)
+    .AddJsonFile("appsettings.json", false, true)
+    .Build();
+
+var awsOptions = configuration.GetAWSOptions();
+awsOptions.Region = RegionEndpoint.EUWest2;
+
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApiDocument(config =>
-{
-    config.DocumentName = swaggerDocumentTitle;
-    config.Title = $"{swaggerDocumentTitle} {swaggerDocumentVersion}";
-    config.Version = swaggerDocumentVersion;
-});
+builder.Services
+    .AddAWSService<IAmazonDynamoDB>()
+    .AddDefaultAWSOptions(awsOptions)
+    .AddSingleton<IDynamoDBContext, DynamoDBContext>(provider =>
+    {
+        var dynamoDbClient = provider.GetRequiredService<IAmazonDynamoDB>();
+        var webHostEnvironment = provider.GetRequiredService<IWebHostEnvironment>();
+
+        return new DynamoDBContext(
+            dynamoDbClient,
+            new DynamoDBOperationConfig
+            {
+                TableNamePrefix = $"{webHostEnvironment.EnvironmentName}.",
+                SkipVersionCheck = true,
+                DisableFetchingTableMetadata = true
+            });
+    })
+    .AddEndpointsApiExplorer()
+    .AddOpenApiDocument(config =>
+    {
+        config.DocumentName = swaggerDocumentTitle;
+        config.Title = $"{swaggerDocumentTitle} {swaggerDocumentVersion}";
+        config.Version = swaggerDocumentVersion;
+    })
+    .AddLogging()
+    .AddHealthChecks();
 
 var app = builder.Build();
 
@@ -28,41 +58,50 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.MapGet("/orders", async () =>
-    new []
+app.MapGet(
+    "/orders/{id:int}", async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
-        new Order
-        {
-            Id = 1,
-            Symbol = "JPM",
-            Side = OrderSide.Buy,
-            Amount = 20,
-            Price = 20
-        },
-        new Order
-        {
-            Id = 1,
-            Symbol = "GOOG",
-            Side = OrderSide.Sell,
-            Amount = 12,
-            Price = 25
-        },
-        new Order
-        {
-            Id = 1,
-            Symbol = "AMZN",
-            Side = OrderSide.Sell,
-            Amount = 7,
-            Price = 10
-        },
-        new Order
-        {
-            Id = 1,
-            Symbol = "JPM",
-            Side = OrderSide.Buy,
-            Amount = 10,
-            Price = 21
-        }
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
+        var order = await dynamoDbContext.LoadAsync<Order>($"order#{id}", $"order#{id}");
+        stopwatch.Stop();
+        logger.LogInformation("DynamoDB time: {DynamoDBTime}", stopwatch.ElapsedMilliseconds);
+
+        return order;
     });
 
+app.MapHealthChecks("/health");
+
 app.Run();
+
+[DynamoDBTable("jpmc.ordermanagement")]
+public record Order
+{
+    [DynamoDBHashKey] public string PK { get; set; } = null!;
+
+    [DynamoDBRangeKey] public string SK { get; set; } = null!;
+
+    [DynamoDBVersion] public int? Version { get; set; }
+
+    [DynamoDBProperty] public string EntityType { get; set; } = null!;
+
+    [DynamoDBProperty] public int ID { get; set; }
+
+    [DynamoDBProperty] public string Symbol { get; set; } = null!;
+
+    [DynamoDBProperty] public Side Side { get; set; }
+
+    [DynamoDBProperty] public int Amount { get; set; }
+
+    [DynamoDBProperty] public int Price { get; set; }
+
+    [DynamoDBProperty] public DateTime CreateTimestamp { get; set; } = DateTime.UtcNow;
+
+    [DynamoDBProperty] public DateTime? UpdateTimestamp { get; set; }
+}
+
+public enum Side
+{
+    Buy,
+    Sell
+}
