@@ -74,7 +74,9 @@ app.UsePathBase(new PathString("/api"));
 
 app.UseHttpLogging();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment()
+    || app.Environment.IsEnvironment("dev")
+    || app.Environment.IsEnvironment("local"))
 {
     app.UseOpenApi();
     app.UseSwaggerUi(config =>
