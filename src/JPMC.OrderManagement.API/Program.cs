@@ -1,4 +1,3 @@
-using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.XRay.Recorder.Core;
@@ -22,10 +21,9 @@ var configuration = new ConfigurationBuilder()
 
 var xrayEnable = configuration.GetValue<bool>("XRay:Enable");
 var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
+var dynamoDbTableName = configuration.GetValue<string>("Service:DynamoDbTableName");
 
 var awsOptions = configuration.GetAWSOptions();
-// TODO: remove region
-awsOptions.Region = RegionEndpoint.EUWest2;
 
 if (xrayEnable)
 {
@@ -37,20 +35,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddAWSService<IAmazonDynamoDB>()
     .AddDefaultAWSOptions(awsOptions)
+    .AddSingleton(provider =>
+    {
+        var webHostEnvironment = provider.GetRequiredService<IWebHostEnvironment>();
+        return new DynamoDBOperationConfig
+        {
+            TableNamePrefix = $"{webHostEnvironment.EnvironmentName}.",
+            OverrideTableName = dynamoDbTableName,
+            SkipVersionCheck = true
+        };
+    })
     .AddSingleton<IDynamoDBContext, DynamoDBContext>(provider =>
     {
         var dynamoDbClient = provider.GetRequiredService<IAmazonDynamoDB>();
-
-        var webHostEnvironment = provider.GetRequiredService<IWebHostEnvironment>();
+        var dynamoDbOperationConfig = provider.GetRequiredService<DynamoDBOperationConfig>();
 
         return new DynamoDBContext(
             dynamoDbClient,
-            new DynamoDBOperationConfig
-            {
-                TableNamePrefix = $"{webHostEnvironment.EnvironmentName}.",
-                SkipVersionCheck = true,
-                DisableFetchingTableMetadata = false
-            });
+            dynamoDbOperationConfig);
     })
     .AddSingleton<IOrderManager, OrderManager>()
     .AddEndpointsApiExplorer()
@@ -107,9 +109,7 @@ if (app.Environment.IsDevelopment()
     });
 }
 
-// TODO: Add a service (CRUD Order) and inject it here.
-
-// read orders
+// Read orders
 app.MapGet(
     "/orders/{id:int}",
     async (int id, [FromServices] IOrderManager orderManager) =>
@@ -138,7 +138,7 @@ app.MapPost(
     });
 
 // Modify orders
-app.MapPut(
+app.MapPatch(
     "/orders/{id:int}",
     async (int id, [FromBody] ApiModels.ModifyOrder order, [FromServices] IOrderManager orderManager) =>
     {
@@ -169,6 +169,7 @@ app.MapDelete(
         }
     });
 
+// Trade placement
 app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
         [FromServices] IOrderManager orderManager) =>
@@ -193,6 +194,7 @@ app.MapPost("/trade",
         }
     });
 
+// Trade price calculation
 app.MapPost("/trade/price",
     async ([FromBody] ApiModels.Trade trade,
         [FromServices] IOrderManager orderManager) =>

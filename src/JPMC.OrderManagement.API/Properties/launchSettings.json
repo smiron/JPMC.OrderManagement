@@ -4,7 +4,8 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "local"
+        "ASPNETCORE_ENVIRONMENT": "local",
+        "AWS_REGION": "eu-west-2"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:8080/api/swagger"
@@ -13,7 +14,8 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "local"
+        "ASPNETCORE_ENVIRONMENT": "local",
+        "AWS_REGION": "eu-west-2"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:8081/api/swagger;http://localhost:8080/api/swagger"
@@ -22,7 +24,8 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "local"
+        "ASPNETCORE_ENVIRONMENT": "local",
+        "AWS_REGION": "eu-west-2"
       }
     },
     "WSL": {
@@ -31,6 +34,7 @@
       "launchUrl": "https://localhost:7030",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "local",
+        "AWS_REGION": "eu-west-2",
         "ASPNETCORE_URLS": "https://localhost:8081/api/swagger;http://localhost:8080/api/swagger"
       },
       "distributionName": ""

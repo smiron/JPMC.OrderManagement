@@ -3,8 +3,6 @@ using JPMC.OrderManagement.API.ApiModels;
 
 namespace JPMC.OrderManagement.API.DataModels;
 
-// TODO: inject the table name dynamically via appsettings keys
-[DynamoDBTable("jpmc.ordermanagement")]
 public class Order : EntityBase
 {
     private string _symbol = string.Empty;
@@ -16,7 +14,7 @@ public class Order : EntityBase
         EntityType = "ORDER";
     }
 
-    [DynamoDBProperty(Attributes.Symbol)]
+    [DynamoDBProperty(DynamoDbAttributes.Symbol)]
     public string Symbol
     {
         get => _symbol;
@@ -27,7 +25,7 @@ public class Order : EntityBase
         }
     }
 
-    [DynamoDBProperty(Attributes.Side)]
+    [DynamoDBProperty(DynamoDbAttributes.Side)]
     public Side Side
     {
         get => _side;
@@ -38,7 +36,7 @@ public class Order : EntityBase
         }
     }
 
-    [DynamoDBProperty(Attributes.Price)]
+    [DynamoDBProperty(DynamoDbAttributes.Price)]
     public int Price
     {
         get => _price;
@@ -49,12 +47,8 @@ public class Order : EntityBase
         }
     }
 
-    [DynamoDBProperty(Attributes.Amount)]
-    public int Amount
-    {
-        get;
-        set;
-    }
+    [DynamoDBProperty(DynamoDbAttributes.Amount)]
+    public int Amount { get; set; }
 
     private void UpdateIndexValues()
     {

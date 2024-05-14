@@ -6,7 +6,7 @@ using JPMC.OrderManagement.API.Services.Interfaces;
 
 namespace JPMC.OrderManagement.API.Services;
 
-public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
+public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManager
 {
     private readonly PutItemOperationConfig _createItemOperationConfig = new()
     {
@@ -34,7 +34,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
 
     public async Task<Order?> GetOrder(int orderId)
     {
-        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{orderId}", $"ORDER#{orderId}");
+        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{orderId}", $"ORDER#{orderId}", dynamoDbOperationConfig);
 
         return order == null
             ? null
@@ -62,13 +62,14 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
             Sk = $"ORDER#{orderId}"
         };
 
-        var createOrderDocument = dynamoDbContext.ToDocument(order);
+        var createOrderDocument = dynamoDbContext.ToDocument(order, dynamoDbOperationConfig);
 
         try
         {
-            await dynamoDbContext.GetTargetTable<DataModels.Order>().PutItemAsync(
-                createOrderDocument,
-                _createItemOperationConfig);
+            await dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig)
+                .PutItemAsync(
+                    createOrderDocument,
+                    _createItemOperationConfig);
         }
         catch (ConditionalCheckFailedException)
         {
@@ -91,17 +92,18 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
 
             var updateOrderDocument = new Document
             {
-                { DataModels.Attributes.Pk, orderToUpdate.Pk },
-                { DataModels.Attributes.Sk, orderToUpdate.Sk },
-                { DataModels.Attributes.Id, orderToUpdate.Id },
-                { DataModels.Attributes.Amount, orderToUpdate.Amount },
-                { DataModels.Attributes.Price, orderToUpdate.Price },
-                { DataModels.Attributes.ETag, orderToUpdate.ETag },
+                { DataModels.DynamoDbAttributes.Pk, orderToUpdate.Pk },
+                { DataModels.DynamoDbAttributes.Sk, orderToUpdate.Sk },
+                { DataModels.DynamoDbAttributes.Id, orderToUpdate.Id },
+                { DataModels.DynamoDbAttributes.Amount, orderToUpdate.Amount },
+                { DataModels.DynamoDbAttributes.Price, orderToUpdate.Price },
+                { DataModels.DynamoDbAttributes.ETag, orderToUpdate.ETag },
             };
 
-            await dynamoDbContext.GetTargetTable<DataModels.Order>().UpdateItemAsync(
-                updateOrderDocument,
-                _updateItemOperationConfig);
+            await dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig)
+                .UpdateItemAsync(
+                    updateOrderDocument,
+                    _updateItemOperationConfig);
         }
         catch (ConditionalCheckFailedException)
         {
@@ -120,15 +122,16 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
 
         var orderToDeleteDocument = new Document
         {
-            { DataModels.Attributes.Pk, orderToDelete.Pk },
-            { DataModels.Attributes.Sk, orderToDelete.Sk }
+            { DataModels.DynamoDbAttributes.Pk, orderToDelete.Pk },
+            { DataModels.DynamoDbAttributes.Sk, orderToDelete.Sk }
         };
 
         try
         {
-            await dynamoDbContext.GetTargetTable<DataModels.Order>().DeleteItemAsync(
-                orderToDeleteDocument,
-                _deleteItemOperationConfig);
+            await dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig)
+                .DeleteItemAsync(
+                    orderToDeleteDocument,
+                    _deleteItemOperationConfig);
         }
         catch (ConditionalCheckFailedException)
         {
@@ -143,6 +146,9 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
         $"{symbol}#{side}",
                 new DynamoDBOperationConfig
                 {
+                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
+                    OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+                    SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck,
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
                     BackwardQuery = side == Side.Sell,
@@ -186,6 +192,9 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
         $"{symbol}#{side}",
                 new DynamoDBOperationConfig
                 {
+                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
+                    OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+                    SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck,
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
                     BackwardQuery = side == Side.Sell,
@@ -220,20 +229,21 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
             throw new OrderManagerException("The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
         }
 
-        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>().CreateTransactWrite();
-        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>().CreateTransactWrite();
+        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>(dynamoDbOperationConfig).CreateTransactWrite();
+        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig).CreateTransactWrite();
 
         var tradeId = Guid.NewGuid().ToString("D");
         tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade
-        {
-            Pk = $"TRADE#{tradeId}",
-            Sk = $"TRADE#{tradeId}",
-            Amount = amount,
-            EntityType = "TRADE",
-            Id = tradeId,
-            Side = side,
-            Symbol = symbol
-        }));
+            {
+                Pk = $"TRADE#{tradeId}",
+                Sk = $"TRADE#{tradeId}",
+                Amount = amount,
+                EntityType = "TRADE",
+                Id = tradeId,
+                Side = side,
+                Symbol = symbol
+            },
+            dynamoDbOperationConfig));
 
         foreach (var order in ordersToUpdate)
         {
@@ -252,7 +262,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
                 };
 
                 ordersDocumentTransactWrite.AddDocumentToUpdate(
-                    dynamoDbContext.ToDocument(order),
+                    dynamoDbContext.ToDocument(order, dynamoDbOperationConfig),
                     updateConfig);
             }
             else
@@ -270,7 +280,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
                 };
 
                 ordersDocumentTransactWrite.AddItemToDelete(
-                    dynamoDbContext.ToDocument(order),
+                    dynamoDbContext.ToDocument(order, dynamoDbOperationConfig),
                     deleteConfig);
             }
         }
