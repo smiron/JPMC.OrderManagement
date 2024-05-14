@@ -245,7 +245,7 @@ app.MapDelete(
 
 app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
-        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] IAmazonDynamoDB dynamoDbClient, [FromServices] ILogger<Program> logger) =>
     {
         var orderQuery =
             dynamoDbContext.QueryAsync<DataModels.Order>(
@@ -288,11 +288,11 @@ app.MapPost("/trade",
                 "The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
         }
 
-        var tradesTransactWrite = dynamoDbContext.CreateTransactWrite<DataModels.Trade>();
-        var ordersTransactWrite = dynamoDbContext.CreateTransactWrite<DataModels.Order>();
+        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>().CreateTransactWrite();
+        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>().CreateTransactWrite();
 
         var tradeId = Guid.NewGuid().ToString("D");
-        tradesTransactWrite.AddSaveItem(new DataModels.Trade
+        tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade
         {
             Pk = $"TRADE#{tradeId}",
             Sk = $"TRADE#{tradeId}",
@@ -301,23 +301,58 @@ app.MapPost("/trade",
             Id = tradeId,
             Side = trade.Side,
             Symbol = trade.Symbol
-        });
+        }));
 
         foreach (var order in ordersToUpdate)
         {
             if (order.Amount > 0)
             {
-                ordersTransactWrite.AddSaveItem(order);
+                var updateConfig = new TransactWriteItemOperationConfig
+                {
+                    ConditionalExpression = new Expression
+                    {
+                        ExpressionStatement = "ETag = :currentETag",
+                        ExpressionAttributeValues =
+                        {
+                            [":currentETag"] = new Primitive(order.ETag)
+                        }
+                    }
+                };
+
+                ordersDocumentTransactWrite.AddDocumentToUpdate(
+                    dynamoDbContext.ToDocument(order),
+                    updateConfig);
             }
             else
             {
-                ordersTransactWrite.AddDeleteItem(order);
+                var deleteConfig = new TransactWriteItemOperationConfig
+                {
+                    ConditionalExpression = new Expression
+                    {
+                        ExpressionStatement = "ETag = :currentETag",
+                        ExpressionAttributeValues =
+                        {
+                            [":currentETag"] = new Primitive(order.ETag)
+                        }
+                    }
+                };
+
+                ordersDocumentTransactWrite.AddItemToDelete(
+                    dynamoDbContext.ToDocument(order),
+                    deleteConfig);
             }
         }
 
-        await dynamoDbContext.ExecuteTransactWriteAsync([tradesTransactWrite, ordersTransactWrite]);
-
-        return Results.Created();
+        try
+        {
+            await tradesDocumentTransactWrite.Combine(ordersDocumentTransactWrite).ExecuteAsync();
+            return Results.Created();
+        }
+        catch (TransactionCanceledException)
+        {
+            // TODO: determine how we should reach in this case. The customer needs to retry.
+            return Results.BadRequest("The orders due to be used in this trade have been updated. Please retry.");
+        }
     });
 
 app.MapPost("/trade/price",
