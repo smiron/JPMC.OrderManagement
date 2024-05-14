@@ -29,5 +29,5 @@ public record Order
 
     [DynamoDBProperty("GSI1PK")] public string Gsi1SymbolSide { get; set; } = null!;
 
-    [DynamoDBProperty("GSI1SK")] public int Gsi1Price { get; set; }
+    [DynamoDBProperty("GSI1SK")] public string Gsi1Price { get; set; } = null!;
 }

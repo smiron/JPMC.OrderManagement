@@ -170,7 +170,7 @@ app.MapPost(
                 Pk = $"ORDER#{id}",
                 Sk = $"ORDER#{id}",
                 Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
-                Gsi1Price = order.Price
+                Gsi1Price = $"{order.Price:0000000}"
             });
 
             await dynamoDbContext.GetTargetTable<DataModels.Order>().PutItemAsync(
@@ -179,7 +179,7 @@ app.MapPost(
 
             return Results.Created();
         }
-        catch (ConditionalCheckFailedException ex)
+        catch (ConditionalCheckFailedException)
         {
             return Results.Conflict("An Order with the same ID already exists.");
         }
@@ -203,7 +203,7 @@ app.MapPut(
                 Pk = $"ORDER#{id}",
                 Sk = $"ORDER#{id}",
                 Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
-                Gsi1Price = order.Price
+                Gsi1Price = $"{order.Price:0000000}"
             });
 
             await dynamoDbContext.GetTargetTable<DataModels.Order>().UpdateItemAsync(

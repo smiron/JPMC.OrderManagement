@@ -55,6 +55,24 @@ internal class InfrastructureStack : AmazonCDK.Stack
             TableClass = DDB.TableClass.STANDARD
         });
 
+        ddbTable.AddGlobalSecondaryIndex(new DDB.GlobalSecondaryIndexProps
+        {
+            IndexName = "GSI1",
+            PartitionKey = new DDB.Attribute
+            {
+                Name = "GSI1PK",
+                Type = DDB.AttributeType.STRING
+            },
+            SortKey = new DDB.Attribute
+            {
+                Name = "GSI1SK",
+                Type = DDB.AttributeType.STRING
+            },
+            ProjectionType = DDB.ProjectionType.ALL,
+            ReadCapacity = 1,
+            WriteCapacity = 1
+        });
+
         var addOrderFunction = new Function(this, functionId, new FunctionProps
         {
             FunctionName = $"{appSettings.Environment}-{functionId}",
