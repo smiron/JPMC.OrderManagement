@@ -10,7 +10,7 @@ public class EntityBase
 
     [DynamoDBProperty] public string EntityType { get; set; } = null!;
 
-    [DynamoDBProperty("ID")] public int Id { get; set; }
+    [DynamoDBProperty("ID")] public string Id { get; set; } = null!;
 
     [DynamoDBProperty] public string ETag { get; set; } = Guid.NewGuid().ToString("D");
 

@@ -20,4 +20,6 @@ public class TradePrice
     /// This field is set to `false` if the order book doesn't have enough orders to satisfy the required trade amount. The customer needs to retry at a later time in this case.
     /// </summary>
     public bool Successful { get; set; }
+
+    public string? Reason { get; set; }
 }

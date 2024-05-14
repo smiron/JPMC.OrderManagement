@@ -144,7 +144,7 @@ app.MapGet(
             ? Results.NotFound()
             : Results.Ok(new ApiModels.Order
             {
-                Id = order.Id,
+                Id = id,
                 Symbol = order.Symbol,
                 Side = order.Side,
                 Amount = order.Amount,
@@ -161,7 +161,7 @@ app.MapPost(
         {
             var createOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
             {
-                Id = id,
+                Id = id.ToString(),
                 Symbol = order.Symbol,
                 Side = order.Side,
                 Amount = order.Amount,
@@ -194,7 +194,7 @@ app.MapPut(
         {
             var updatedOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
             {
-                Id = id,
+                Id = id.ToString(),
                 Symbol = order.Symbol,
                 Side = order.Side,
                 Amount = order.Amount,
@@ -247,19 +247,14 @@ app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
         [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
-        // look for orders that can take the other side of the trade
-        var orderBookSide = trade.Side == ApiModels.Side.Buy
-            ? ApiModels.Side.Sell
-            : ApiModels.Side.Buy;
-
         var orderQuery =
             dynamoDbContext.QueryAsync<DataModels.Order>(
-                $"{trade.Symbol}#{orderBookSide}",
+                $"{trade.Symbol}#{trade.Side}",
                 new DynamoDBOperationConfig
                 {
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
-                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index backward
-                    BackwardQuery = trade.Side != ApiModels.Side.Buy,
+                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
+                    BackwardQuery = trade.Side == ApiModels.Side.Sell,
                     IndexName = "GSI1"
                 });
 
@@ -285,6 +280,44 @@ app.MapPost("/trade",
                 }
             }
         }
+
+        if (fulfilledAmount < trade.Amount)
+        {
+            // TODO: consider what is the correct solution for returning in case we could not satisfy the trade
+            return Results.BadRequest(
+                "The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
+        }
+
+        var tradesTransactWrite = dynamoDbContext.CreateTransactWrite<DataModels.Trade>();
+        var ordersTransactWrite = dynamoDbContext.CreateTransactWrite<DataModels.Order>();
+
+        var tradeId = Guid.NewGuid().ToString("D");
+        tradesTransactWrite.AddSaveItem(new DataModels.Trade
+        {
+            Pk = $"TRADE#{tradeId}",
+            Sk = $"TRADE#{tradeId}",
+            Amount = trade.Amount,
+            EntityType = "TRADE",
+            Id = tradeId,
+            Side = trade.Side,
+            Symbol = trade.Symbol
+        });
+
+        foreach (var order in ordersToUpdate)
+        {
+            if (order.Amount > 0)
+            {
+                ordersTransactWrite.AddSaveItem(order);
+            }
+            else
+            {
+                ordersTransactWrite.AddDeleteItem(order);
+            }
+        }
+
+        await dynamoDbContext.ExecuteTransactWriteAsync([tradesTransactWrite, ordersTransactWrite]);
+
+        return Results.Created();
     });
 
 app.MapPost("/trade/price",
@@ -327,14 +360,15 @@ app.MapPost("/trade/price",
         return fulfilledAmount < trade.Amount
             ? Results.Ok(new ApiModels.TradePrice
             {
+                Timestamp = DateTime.UtcNow,
                 Successful = false,
-                Timestamp = DateTime.UtcNow
+                Reason = "The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time."
             })
             : Results.Ok(new ApiModels.TradePrice
             {
+                Timestamp = DateTime.UtcNow,
                 Successful = true,
-                Price = calculatedPrice,
-                Timestamp = DateTime.UtcNow
+                Price = calculatedPrice
             });
     });
 
