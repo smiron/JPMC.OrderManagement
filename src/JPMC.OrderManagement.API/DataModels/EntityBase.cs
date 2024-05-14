@@ -2,16 +2,16 @@
 
 namespace JPMC.OrderManagement.API.DataModels;
 
-public class EntityBase
+public abstract class EntityBase(string entityType)
 {
     [DynamoDBHashKey(DynamoDbAttributes.Pk)]
-    public required string Pk { get; set; }
+    public string Pk { get; set; } = null!;
 
     [DynamoDBRangeKey(DynamoDbAttributes.Sk)]
-    public required string Sk { get; set; }
+    public string Sk { get; set; } = null!;
 
     [DynamoDBProperty(DynamoDbAttributes.EntityType)]
-    public string EntityType { get; set; } = null!;
+    public string EntityType { get; set; } = entityType;
 
     [DynamoDBProperty(DynamoDbAttributes.Id)]
     public string Id { get; set; } = null!;

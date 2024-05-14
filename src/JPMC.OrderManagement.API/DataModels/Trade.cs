@@ -3,11 +3,20 @@ using JPMC.OrderManagement.API.ApiModels;
 
 namespace JPMC.OrderManagement.API.DataModels;
 
-public class Trade : EntityBase
+public class Trade() : EntityBase(TradeEntityType)
 {
-    [DynamoDBProperty] public string Symbol { get; set; } = null!;
+    public const string TradeEntityType = "TRADE";
 
-    [DynamoDBProperty] public Side Side { get; set; }
+    public Trade(string tradeId) : this()
+    {
+        Id = tradeId;
+        Pk = $"{TradeEntityType}#{tradeId}";
+        Sk = $"{TradeEntityType}#{tradeId}";
+    }
 
-    [DynamoDBProperty] public int Amount { get; set; }
+    [DynamoDBProperty(DynamoDbAttributes.Symbol)] public string Symbol { get; set; } = null!;
+
+    [DynamoDBProperty(DynamoDbAttributes.Side)] public Side Side { get; set; }
+
+    [DynamoDBProperty(DynamoDbAttributes.Amount)] public int Amount { get; set; }
 }

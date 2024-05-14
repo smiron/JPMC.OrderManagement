@@ -8,6 +8,8 @@ namespace JPMC.OrderManagement.API.Services;
 
 public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManager
 {
+    private const string Gsi1IndexName = "GSI1";
+
     private readonly PutItemOperationConfig _createItemOperationConfig = new()
     {
         ConditionalExpression = new Expression
@@ -34,7 +36,10 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
 
     public async Task<Order?> GetOrder(int orderId)
     {
-        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{orderId}", $"ORDER#{orderId}", dynamoDbOperationConfig);
+        // The initial value for this variable is only used to calculate the DynamoDB record PK and SK.
+        // We subsequently override the variable value with the actual record retrieved from DynamoDB
+        var order = new DataModels.Order(orderId);
+        order = await dynamoDbContext.LoadAsync<DataModels.Order>(order.Pk, order.Sk, dynamoDbOperationConfig);
 
         return order == null
             ? null
@@ -50,16 +55,12 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
 
     public async Task AddOrder(int orderId, string symbol, Side side, int amount, int price)
     {
-        var order = new DataModels.Order
+        var order = new DataModels.Order(orderId)
         {
-            Id = orderId.ToString(),
             Symbol = symbol,
             Side = side,
             Amount = amount,
-            Price = price,
-            EntityType = "ORDER",
-            Pk = $"ORDER#{orderId}",
-            Sk = $"ORDER#{orderId}"
+            Price = price
         };
 
         var createOrderDocument = dynamoDbContext.ToDocument(order, dynamoDbOperationConfig);
@@ -81,11 +82,8 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
     {
         try
         {
-            var orderToUpdate = new DataModels.Order
+            var orderToUpdate = new DataModels.Order(orderId)
             {
-                Pk = $"ORDER#{orderId}",
-                Sk = $"ORDER#{orderId}",
-                Id = orderId.ToString(),
                 Amount = amount,
                 Price = price
             };
@@ -114,11 +112,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
     public async Task RemoveOrder(int orderId)
     {
 
-        var orderToDelete = new DataModels.Order
-        {
-            Pk = $"ORDER#{orderId}",
-            Sk = $"ORDER#{orderId}"
-        };
+        var orderToDelete = new DataModels.Order(orderId);
 
         var orderToDeleteDocument = new Document
         {
@@ -152,7 +146,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
                     BackwardQuery = side == Side.Sell,
-                    IndexName = "GSI1"
+                    IndexName = Gsi1IndexName
                 });
 
         int fulfilledAmount = 0;
@@ -198,7 +192,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
                     BackwardQuery = side == Side.Sell,
-                    IndexName = "GSI1"
+                    IndexName = Gsi1IndexName
                 });
 
         var ordersToUpdate = new List<DataModels.Order>();
@@ -233,13 +227,9 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
         var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig).CreateTransactWrite();
 
         var tradeId = Guid.NewGuid().ToString("D");
-        tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade
+        tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade(tradeId)
             {
-                Pk = $"TRADE#{tradeId}",
-                Sk = $"TRADE#{tradeId}",
                 Amount = amount,
-                EntityType = "TRADE",
-                Id = tradeId,
                 Side = side,
                 Symbol = symbol
             },
