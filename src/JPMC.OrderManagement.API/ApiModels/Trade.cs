@@ -9,17 +9,23 @@ public class Trade
     public int Amount { get; set; }
 }
 
-public class TradePrice
+public abstract class TradeActionResult
 {
     public DateTime Timestamp { get; set; }
 
-    public int? Price { get; set; }
-
     /// <summary>
-    /// This field is set to `true` if a trade price has been successfully calculated.
-    /// This field is set to `false` if the order book doesn't have enough orders to satisfy the required trade amount. The customer needs to retry at a later time in this case.
+    /// This field is set to `true` if the API action has been successfully completed.
     /// </summary>
     public bool Successful { get; set; }
 
     public string? Reason { get; set; }
+}
+
+public class TradePriceCalculationResult : TradeActionResult
+{
+    public int? Price { get; set; }
+}
+
+public class TradePlacementResult : TradeActionResult
+{
 }

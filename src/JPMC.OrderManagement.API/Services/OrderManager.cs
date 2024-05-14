@@ -1,6 +1,7 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
+using JPMC.OrderManagement.API.ApiModels;
 using JPMC.OrderManagement.API.Services.Interfaces;
 
 namespace JPMC.OrderManagement.API.Services;
@@ -31,13 +32,13 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
         }
     };
 
-    public async Task<ApiModels.Order?> GetOrder(int orderId)
+    public async Task<Order?> GetOrder(int orderId)
     {
         var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{orderId}", $"ORDER#{orderId}");
 
         return order == null
             ? null
-            : new ApiModels.Order
+            : new Order
             {
                 Id = orderId,
                 Symbol = order.Symbol,
@@ -47,7 +48,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
             };
     }
 
-    public async Task AddOrder(int orderId, string symbol, ApiModels.Side side, int amount, int price)
+    public async Task AddOrder(int orderId, string symbol, Side side, int amount, int price)
     {
         var order = new DataModels.Order
         {
@@ -135,7 +136,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
         }
     }
 
-    public async Task<int> CalculatePrice(string symbol, ApiModels.Side side, int amount)
+    public async Task<int> CalculatePrice(string symbol, Side side, int amount)
     {
         var orderQuery =
             dynamoDbContext.QueryAsync<DataModels.Order>(
@@ -144,7 +145,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
                 {
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
-                    BackwardQuery = side == ApiModels.Side.Sell,
+                    BackwardQuery = side == Side.Sell,
                     IndexName = "GSI1"
                 });
 
@@ -176,6 +177,112 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
         }
 
         return calculatedPrice;
+    }
+
+    public async Task PlaceTrade(string symbol, Side side, int amount)
+    {
+        var orderQuery =
+            dynamoDbContext.QueryAsync<DataModels.Order>(
+        $"{symbol}#{side}",
+                new DynamoDBOperationConfig
+                {
+                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
+                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
+                    BackwardQuery = side == Side.Sell,
+                    IndexName = "GSI1"
+                });
+
+        var ordersToUpdate = new List<DataModels.Order>();
+        int fulfilledAmount = 0;
+
+        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
+        while (!orderQuery.IsDone && fulfilledAmount < amount)
+        {
+            var ordersPage = await orderQuery.GetNextSetAsync();
+
+            foreach (var order in ordersPage)
+            {
+                int orderFulfilledAmount = amount - fulfilledAmount > order.Amount ? order.Amount : amount - fulfilledAmount;
+                fulfilledAmount += orderFulfilledAmount;
+                order.Amount -= orderFulfilledAmount;
+                ordersToUpdate.Add(order);
+
+                if (fulfilledAmount >= amount)
+                {
+                    // End the order processing loop early if we've already fulfilled the trade amount
+                    break;
+                }
+            }
+        }
+
+        if (fulfilledAmount < amount)
+        {
+            throw new OrderManagerException("The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
+        }
+
+        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>().CreateTransactWrite();
+        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>().CreateTransactWrite();
+
+        var tradeId = Guid.NewGuid().ToString("D");
+        tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade
+        {
+            Pk = $"TRADE#{tradeId}",
+            Sk = $"TRADE#{tradeId}",
+            Amount = amount,
+            EntityType = "TRADE",
+            Id = tradeId,
+            Side = side,
+            Symbol = symbol
+        }));
+
+        foreach (var order in ordersToUpdate)
+        {
+            if (order.Amount > 0)
+            {
+                var updateConfig = new TransactWriteItemOperationConfig
+                {
+                    ConditionalExpression = new Expression
+                    {
+                        ExpressionStatement = "ETag = :currentETag",
+                        ExpressionAttributeValues =
+                        {
+                            [":currentETag"] = new Primitive(order.ETag)
+                        }
+                    }
+                };
+
+                ordersDocumentTransactWrite.AddDocumentToUpdate(
+                    dynamoDbContext.ToDocument(order),
+                    updateConfig);
+            }
+            else
+            {
+                var deleteConfig = new TransactWriteItemOperationConfig
+                {
+                    ConditionalExpression = new Expression
+                    {
+                        ExpressionStatement = "ETag = :currentETag",
+                        ExpressionAttributeValues =
+                        {
+                            [":currentETag"] = new Primitive(order.ETag)
+                        }
+                    }
+                };
+
+                ordersDocumentTransactWrite.AddItemToDelete(
+                    dynamoDbContext.ToDocument(order),
+                    deleteConfig);
+            }
+        }
+
+        try
+        {
+            await tradesDocumentTransactWrite.Combine(ordersDocumentTransactWrite).ExecuteAsync();
+        }
+        catch (TransactionCanceledException)
+        {
+            throw new OrderManagerException("The orders due to be used in this trade have been updated. Please retry.");
+        }
     }
 }
 

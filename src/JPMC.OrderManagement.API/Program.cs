@@ -1,8 +1,6 @@
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
-using Amazon.DynamoDBv2.Model;
 using Amazon.XRay.Recorder.Core;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using AWS.Logger;
@@ -13,7 +11,6 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 
 using ApiModels = JPMC.OrderManagement.API.ApiModels;
-using DataModels = JPMC.OrderManagement.API.DataModels;
 
 var swaggerDocumentTitle = $"{Constants.System}API";
 var swaggerDocumentVersion = "v1";
@@ -174,113 +171,25 @@ app.MapDelete(
 
 app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
-        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+        [FromServices] IOrderManager orderManager) =>
     {
-        var orderQuery =
-            dynamoDbContext.QueryAsync<DataModels.Order>(
-                $"{trade.Symbol}#{trade.Side}",
-                new DynamoDBOperationConfig
-                {
-                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
-                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
-                    BackwardQuery = trade.Side == ApiModels.Side.Sell,
-                    IndexName = "GSI1"
-                });
-
-        var ordersToUpdate = new List<DataModels.Order>();
-        int fulfilledAmount = 0;
-
-        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
-        while (!orderQuery.IsDone && fulfilledAmount < trade.Amount)
-        {
-            var ordersPage = await orderQuery.GetNextSetAsync();
-
-            foreach (var order in ordersPage)
-            {
-                int orderFulfilledAmount = trade.Amount - fulfilledAmount > order.Amount ? order.Amount : trade.Amount - fulfilledAmount;
-                fulfilledAmount += orderFulfilledAmount;
-                order.Amount -= orderFulfilledAmount;
-                ordersToUpdate.Add(order);
-
-                if (fulfilledAmount >= trade.Amount)
-                {
-                    // End the order processing loop early if we've already fulfilled the trade amount
-                    break;
-                }
-            }
-        }
-
-        if (fulfilledAmount < trade.Amount)
-        {
-            // TODO: consider what is the correct solution for returning in case we could not satisfy the trade
-            return Results.BadRequest(
-                "The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
-        }
-
-        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>().CreateTransactWrite();
-        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>().CreateTransactWrite();
-
-        var tradeId = Guid.NewGuid().ToString("D");
-        tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade
-        {
-            Pk = $"TRADE#{tradeId}",
-            Sk = $"TRADE#{tradeId}",
-            Amount = trade.Amount,
-            EntityType = "TRADE",
-            Id = tradeId,
-            Side = trade.Side,
-            Symbol = trade.Symbol
-        }));
-
-        foreach (var order in ordersToUpdate)
-        {
-            if (order.Amount > 0)
-            {
-                var updateConfig = new TransactWriteItemOperationConfig
-                {
-                    ConditionalExpression = new Expression
-                    {
-                        ExpressionStatement = "ETag = :currentETag",
-                        ExpressionAttributeValues =
-                        {
-                            [":currentETag"] = new Primitive(order.ETag)
-                        }
-                    }
-                };
-
-                ordersDocumentTransactWrite.AddDocumentToUpdate(
-                    dynamoDbContext.ToDocument(order),
-                    updateConfig);
-            }
-            else
-            {
-                var deleteConfig = new TransactWriteItemOperationConfig
-                {
-                    ConditionalExpression = new Expression
-                    {
-                        ExpressionStatement = "ETag = :currentETag",
-                        ExpressionAttributeValues =
-                        {
-                            [":currentETag"] = new Primitive(order.ETag)
-                        }
-                    }
-                };
-
-                ordersDocumentTransactWrite.AddItemToDelete(
-                    dynamoDbContext.ToDocument(order),
-                    deleteConfig);
-            }
-        }
-
         try
         {
-            await tradesDocumentTransactWrite.Combine(ordersDocumentTransactWrite).ExecuteAsync();
-            return Results.Created();
+            await orderManager.PlaceTrade(trade.Symbol, trade.Side, trade.Amount);
+            return Results.Ok(new ApiModels.TradePlacementResult
+            {
+                Timestamp = DateTime.UtcNow,
+                Successful = true
+            });
         }
-        catch (TransactionCanceledException)
+        catch (OrderManagerException ex)
         {
-            // TODO: determine how we should reach in this case. The customer needs to retry.
-            return Results.BadRequest("The orders due to be used in this trade have been updated. Please retry.");
+            return Results.Ok(new ApiModels.TradePriceCalculationResult
+            {
+                Timestamp = DateTime.UtcNow,
+                Successful = false,
+                Reason = ex.Message
+            });
         }
     });
 
@@ -291,7 +200,7 @@ app.MapPost("/trade/price",
         try
         {
             var tradePrice = await orderManager.CalculatePrice(trade.Symbol, trade.Side, trade.Amount);
-            return Results.Ok(new ApiModels.TradePrice
+            return Results.Ok(new ApiModels.TradePriceCalculationResult
             {
                 Timestamp = DateTime.UtcNow,
                 Successful = true,
@@ -300,7 +209,7 @@ app.MapPost("/trade/price",
         }
         catch (OrderManagerException ex)
         {
-            return Results.Ok(new ApiModels.TradePrice
+            return Results.Ok(new ApiModels.TradePriceCalculationResult
             {
                 Timestamp = DateTime.UtcNow,
                 Successful = false,

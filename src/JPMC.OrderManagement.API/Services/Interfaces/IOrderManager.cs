@@ -16,4 +16,6 @@ public interface IOrderManager
     Task RemoveOrder(int orderId);
 
     Task<int> CalculatePrice(string symbol, Side side, int amount);
+
+    Task PlaceTrade(string symbol, Side side, int amount);
 }
