@@ -74,7 +74,7 @@ builder.Services
             {
                 TableNamePrefix = $"{webHostEnvironment.EnvironmentName}.",
                 SkipVersionCheck = true,
-                DisableFetchingTableMetadata = true
+                DisableFetchingTableMetadata = false
             });
     })
     .AddEndpointsApiExplorer()
@@ -241,6 +241,62 @@ app.MapDelete(
         {
             return Results.NotFound("Order does not exist.");
         }
+    });
+
+app.MapPost("/trade/price",
+    async ([FromBody] ApiModels.Trade trade,
+        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    {
+        // look for orders that can take the other side of the trade
+        var orderBookSide = trade.Side == ApiModels.Side.Buy 
+            ? ApiModels.Side.Sell 
+            : ApiModels.Side.Buy;
+
+        var orderQuery =
+            dynamoDbContext.QueryAsync<DataModels.Order>(
+                $"{trade.Symbol}#{orderBookSide}",
+                new DynamoDBOperationConfig
+                {
+                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
+                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index backward
+                    BackwardQuery = trade.Side != ApiModels.Side.Buy,
+                    IndexName = "GSI1"
+                });
+
+        int fulfilledAmount = 0;
+        int calculatedPrice = 0;
+
+        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
+        while (!orderQuery.IsDone && fulfilledAmount < trade.Amount)
+        {
+            var ordersPage = await orderQuery.GetNextSetAsync();
+
+            foreach (var order in ordersPage)
+            {
+                int orderFulfilledAmount = trade.Amount - fulfilledAmount > order.Amount ? order.Amount : trade.Amount - fulfilledAmount;
+                calculatedPrice += orderFulfilledAmount * order.Price;
+                fulfilledAmount += orderFulfilledAmount;
+
+                if (fulfilledAmount >= trade.Amount)
+                {
+                    // End the order processing loop early if we've already fulfilled the trade amount
+                    break;
+                }
+            }
+        }
+
+        return fulfilledAmount < trade.Amount
+            ? Results.Ok(new ApiModels.TradePrice
+            {
+                Successful = false,
+                Timestamp = DateTime.UtcNow
+            })
+            : Results.Ok(new ApiModels.TradePrice
+            {
+                Successful = true,
+                Price = calculatedPrice,
+                Timestamp = DateTime.UtcNow
+            });
     });
 
 app.Run();

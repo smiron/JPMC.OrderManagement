@@ -35,3 +35,4 @@ TODO:
 - Single Table Design to reduce cost and latency
 - Consider event sourcing
 - Use NLB for even lower latencies
+- Item lineage via DynamoDB streams in S3
