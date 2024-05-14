@@ -2,6 +2,7 @@ using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.DynamoDBv2.Model;
 using Amazon.XRay.Recorder.Core;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using AWS.Logger;
@@ -33,6 +34,30 @@ if (xrayEnable)
     AWSSDKHandler.RegisterXRayForAllServices();    
 }
 
+var createItemOperationConfig = new PutItemOperationConfig
+{
+    ConditionalExpression = new Expression
+    {
+        ExpressionStatement = "attribute_not_exists(ID)"
+    }
+};
+
+var updateItemOperationConfig = new UpdateItemOperationConfig
+{
+    ConditionalExpression = new Expression
+    {
+        ExpressionStatement = "attribute_exists(ID)"
+    }
+};
+
+var deleteItemOperationConfig = new DeleteItemOperationConfig
+{
+    ConditionalExpression = new Expression
+    {
+        ExpressionStatement = "attribute_exists(ID)"
+    }
+};
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddAWSService<IAmazonDynamoDB>()
@@ -40,6 +65,7 @@ builder.Services
     .AddSingleton<IDynamoDBContext, DynamoDBContext>(provider =>
     {
         var dynamoDbClient = provider.GetRequiredService<IAmazonDynamoDB>();
+
         var webHostEnvironment = provider.GetRequiredService<IWebHostEnvironment>();
 
         return new DynamoDBContext(
@@ -112,7 +138,7 @@ app.MapGet(
     "/orders/{id:int}",
     async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
-        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"order#{id}", $"order#{id}");
+        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{id}", $"ORDER#{id}");
 
         return order == null
             ? Results.NotFound()
@@ -129,11 +155,11 @@ app.MapGet(
 // create orders
 app.MapPost(
     "/orders/{id:int}",
-    async (int id, [FromBody] ApiModels.Order order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    async (int id, [FromBody] ApiModels.CreateUpdateOrder order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
-        // TODO: create if not exists
-        await dynamoDbContext.SaveAsync(
-            new DataModels.Order
+        try
+        {
+            var createOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
             {
                 Id = id,
                 Symbol = order.Symbol,
@@ -145,35 +171,51 @@ app.MapPost(
                 Sk = $"ORDER#{id}",
                 Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
                 Gsi1Price = order.Price
-            },
-            new DynamoDBOperationConfig
-            {
-                
             });
 
-        return Results.Created();
+            await dynamoDbContext.GetTargetTable<DataModels.Order>().PutItemAsync(
+                createOrderDocument,
+                createItemOperationConfig);
+
+            return Results.Created();
+        }
+        catch (ConditionalCheckFailedException ex)
+        {
+            return Results.Conflict("An Order with the same ID already exists.");
+        }
     });
 
 // update orders
 app.MapPut(
     "/orders/{id:int}",
-    async (int id, [FromBody] ApiModels.Order order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    async (int id, [FromBody] ApiModels.CreateUpdateOrder order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] IAmazonDynamoDB amazonDynamoDbClient, [FromServices] ILogger<Program> logger) =>
     {
-        await dynamoDbContext.SaveAsync(new DataModels.Order
+        try
         {
-            Id = id,
-            Symbol = order.Symbol,
-            Side = order.Side,
-            Amount = order.Amount,
-            Price = order.Price,
-            EntityType = "ORDER",
-            Pk = $"ORDER#{id}",
-            Sk = $"ORDER#{id}",
-            Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
-            Gsi1Price = order.Price
-        });
+            var updatedOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
+            {
+                Id = id,
+                Symbol = order.Symbol,
+                Side = order.Side,
+                Amount = order.Amount,
+                Price = order.Price,
+                EntityType = "ORDER",
+                Pk = $"ORDER#{id}",
+                Sk = $"ORDER#{id}",
+                Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
+                Gsi1Price = order.Price
+            });
 
-        return Results.Ok();
+            await dynamoDbContext.GetTargetTable<DataModels.Order>().UpdateItemAsync(
+                updatedOrderDocument,
+                updateItemOperationConfig);
+
+            return Results.Ok();
+        }
+        catch(ConditionalCheckFailedException)
+        {
+            return Results.NotFound("Order does not exist.");
+        }
     });
 
 // delete orders
@@ -181,9 +223,24 @@ app.MapDelete(
     "/orders/{id:int}",
     async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
-        await dynamoDbContext.DeleteAsync<DataModels.Order>($"ORDER#{id}", $"ORDER#{id}");
+        try
+        {
+            var deleteOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
+            {
+                Pk = $"ORDER#{id}",
+                Sk = $"ORDER#{id}"
+            });
 
-        return Results.Ok();
+            await dynamoDbContext.GetTargetTable<DataModels.Order>().DeleteItemAsync(
+                deleteOrderDocument,
+                deleteItemOperationConfig);
+
+            return Results.Ok();
+        }
+        catch (ConditionalCheckFailedException)
+        {
+            return Results.NotFound("Order does not exist.");
+        }
     });
 
 app.Run();

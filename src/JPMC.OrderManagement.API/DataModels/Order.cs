@@ -13,8 +13,6 @@ public record Order
 
     [DynamoDBProperty] public string EntityType { get; set; } = null!;
 
-    [DynamoDBVersion] public int? Version { get; set; }
-
     [DynamoDBProperty] public DateTime CreateTimestamp { get; set; } = DateTime.UtcNow;
 
     [DynamoDBProperty] public DateTime? UpdateTimestamp { get; set; }
