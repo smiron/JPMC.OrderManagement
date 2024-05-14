@@ -135,40 +135,13 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
 
     public async Task<int> CalculatePrice(string symbol, Side side, int amount)
     {
-        var orderQuery =
-            dynamoDbContext.QueryAsync<DataModels.Order>(
-        $"{symbol}#{side}",
-                new DynamoDBOperationConfig
-                {
-                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
-                    OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
-                    SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck,
-                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
-                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
-                    BackwardQuery = side == Side.Sell,
-                    IndexName = Gsi1IndexName
-                });
-
         int fulfilledAmount = 0;
         int calculatedPrice = 0;
 
-        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
-        while (!orderQuery.IsDone && fulfilledAmount < amount)
+        await foreach (var tradeOrder in GetTradeOrders(symbol, side, amount))
         {
-            var ordersPage = await orderQuery.GetNextSetAsync();
-
-            foreach (var order in ordersPage)
-            {
-                int orderFulfilledAmount = amount - fulfilledAmount > order.Amount ? order.Amount : amount - fulfilledAmount;
-                calculatedPrice += orderFulfilledAmount * order.Price;
-                fulfilledAmount += orderFulfilledAmount;
-
-                if (fulfilledAmount >= amount)
-                {
-                    // End the order processing loop early if we've already fulfilled the trade amount
-                    break;
-                }
-            }
+            calculatedPrice += tradeOrder.OrderFulfilledAmount * tradeOrder.Order.Price;
+            fulfilledAmount = tradeOrder.TotalFulfilledAmount;
         }
 
         if (fulfilledAmount < amount)
@@ -181,48 +154,6 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
 
     public async Task PlaceTrade(string symbol, Side side, int amount)
     {
-        var orderQuery =
-            dynamoDbContext.QueryAsync<DataModels.Order>(
-        $"{symbol}#{side}",
-                new DynamoDBOperationConfig
-                {
-                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
-                    OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
-                    SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck,
-                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
-                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
-                    BackwardQuery = side == Side.Sell,
-                    IndexName = Gsi1IndexName
-                });
-
-        var ordersToUpdate = new List<DataModels.Order>();
-        int fulfilledAmount = 0;
-
-        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
-        while (!orderQuery.IsDone && fulfilledAmount < amount)
-        {
-            var ordersPage = await orderQuery.GetNextSetAsync();
-
-            foreach (var order in ordersPage)
-            {
-                int orderFulfilledAmount = amount - fulfilledAmount > order.Amount ? order.Amount : amount - fulfilledAmount;
-                fulfilledAmount += orderFulfilledAmount;
-                order.Amount -= orderFulfilledAmount;
-                ordersToUpdate.Add(order);
-
-                if (fulfilledAmount >= amount)
-                {
-                    // End the order processing loop early if we've already fulfilled the trade amount
-                    break;
-                }
-            }
-        }
-
-        if (fulfilledAmount < amount)
-        {
-            throw new OrderManagerException("The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
-        }
-
         var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>(dynamoDbOperationConfig).CreateTransactWrite();
         var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig).CreateTransactWrite();
 
@@ -235,9 +166,14 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
             },
             dynamoDbOperationConfig));
 
-        foreach (var order in ordersToUpdate)
+        int fulfilledAmount = 0;
+
+        await foreach (var tradeOrder in GetTradeOrders(symbol, side, amount))
         {
-            if (order.Amount > 0)
+            tradeOrder.Order.Amount -= tradeOrder.OrderFulfilledAmount;
+            fulfilledAmount = tradeOrder.TotalFulfilledAmount;
+
+            if (tradeOrder.Order.Amount > 0)
             {
                 var updateConfig = new TransactWriteItemOperationConfig
                 {
@@ -246,13 +182,13 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
                         ExpressionStatement = "ETag = :currentETag",
                         ExpressionAttributeValues =
                         {
-                            [":currentETag"] = new Primitive(order.ETag)
+                            [":currentETag"] = new Primitive(tradeOrder.Order.ETag)
                         }
                     }
                 };
 
                 ordersDocumentTransactWrite.AddDocumentToUpdate(
-                    dynamoDbContext.ToDocument(order, dynamoDbOperationConfig),
+                    dynamoDbContext.ToDocument(tradeOrder.Order, dynamoDbOperationConfig),
                     updateConfig);
             }
             else
@@ -264,15 +200,20 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
                         ExpressionStatement = "ETag = :currentETag",
                         ExpressionAttributeValues =
                         {
-                            [":currentETag"] = new Primitive(order.ETag)
+                            [":currentETag"] = new Primitive(tradeOrder.Order.ETag)
                         }
                     }
                 };
 
                 ordersDocumentTransactWrite.AddItemToDelete(
-                    dynamoDbContext.ToDocument(order, dynamoDbOperationConfig),
+                    dynamoDbContext.ToDocument(tradeOrder.Order, dynamoDbOperationConfig),
                     deleteConfig);
             }
+        }
+
+        if (fulfilledAmount < amount)
+        {
+            throw new OrderManagerException("The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time.");
         }
 
         try
@@ -282,6 +223,45 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
         catch (TransactionCanceledException)
         {
             throw new OrderManagerException("The orders due to be used in this trade have been updated. Please retry.");
+        }
+    }
+
+    private async IAsyncEnumerable<(DataModels.Order Order, int OrderFulfilledAmount, int TotalFulfilledAmount)> GetTradeOrders(string symbol, Side side, int amount)
+    {
+        int fulfilledAmount = 0;
+
+        var orderQuery =
+            dynamoDbContext.QueryAsync<DataModels.Order>(
+                $"{symbol}#{side}",
+                new DynamoDBOperationConfig
+                {
+                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
+                    OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+                    SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck,
+                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
+                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
+                    BackwardQuery = side == Side.Sell,
+                    IndexName = Gsi1IndexName
+                });
+
+        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
+        while (!orderQuery.IsDone && fulfilledAmount < amount)
+        {
+            var ordersPage = await orderQuery.GetNextSetAsync();
+
+            foreach (var order in ordersPage)
+            {
+                int orderFulfilledAmount = amount - fulfilledAmount > order.Amount ? order.Amount : amount - fulfilledAmount;
+                fulfilledAmount += orderFulfilledAmount;
+
+                yield return new ValueTuple<DataModels.Order, int, int>(order, orderFulfilledAmount, fulfilledAmount);
+
+                if (fulfilledAmount >= amount)
+                {
+                    // End the order processing loop early if we've already fulfilled the trade amount
+                    yield break;
+                }
+            }
         }
     }
 }

@@ -185,7 +185,7 @@ app.MapPost("/trade",
         }
         catch (OrderManagerException ex)
         {
-            return Results.Ok(new ApiModels.TradePriceCalculationResult
+            return Results.Ok(new ApiModels.TradePlacementResult
             {
                 Timestamp = DateTime.UtcNow,
                 Successful = false,
