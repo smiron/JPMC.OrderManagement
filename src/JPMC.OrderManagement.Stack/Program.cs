@@ -34,10 +34,16 @@ static class Program
             }
         };
 
-        var infrastructureStack = new InfrastructureStack(app, stackProps);
+        var networkingStack = new NetworkingStack(app, appSettings, stackProps);
+        var computeStack = new ComputeStack(app, appSettings, stackProps);
 
-        CdkTags.Of(infrastructureStack).Add($"user:{nameof(Constants.Owner)}", Constants.Owner);
-        CdkTags.Of(infrastructureStack).Add($"user:{nameof(Constants.System)}", Constants.System);
+        computeStack.AddDependency(networkingStack);
+
+        foreach (var stack in new Amazon.CDK.Stack[]{ networkingStack, computeStack })
+        {
+            CdkTags.Of(stack).Add($"user:{nameof(Constants.Owner)}", Constants.Owner);
+            CdkTags.Of(stack).Add($"user:{nameof(Constants.System)}", Constants.System);
+        }
 
         app.Synth();
     }
