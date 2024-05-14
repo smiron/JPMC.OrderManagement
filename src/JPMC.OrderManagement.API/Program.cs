@@ -6,6 +6,8 @@ using Amazon.DynamoDBv2.Model;
 using Amazon.XRay.Recorder.Core;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using AWS.Logger;
+using JPMC.OrderManagement.API.Services;
+using JPMC.OrderManagement.API.Services.Interfaces;
 using JPMC.OrderManagement.Utils;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
@@ -34,21 +36,7 @@ if (xrayEnable)
     AWSSDKHandler.RegisterXRayForAllServices();    
 }
 
-var createItemOperationConfig = new PutItemOperationConfig
-{
-    ConditionalExpression = new Expression
-    {
-        ExpressionStatement = "attribute_not_exists(ID)"
-    }
-};
 
-var updateItemOperationConfig = new UpdateItemOperationConfig
-{
-    ConditionalExpression = new Expression
-    {
-        ExpressionStatement = "attribute_exists(ID)"
-    }
-};
 
 var deleteItemOperationConfig = new DeleteItemOperationConfig
 {
@@ -77,6 +65,7 @@ builder.Services
                 DisableFetchingTableMetadata = false
             });
     })
+    .AddSingleton<IOrderManager, OrderManager>()
     .AddEndpointsApiExplorer()
     .AddOpenApiDocument(config =>
     {
@@ -136,83 +125,42 @@ if (app.Environment.IsDevelopment()
 // read orders
 app.MapGet(
     "/orders/{id:int}",
-    async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    async (int id, [FromServices] IOrderManager orderManager) =>
     {
-        var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{id}", $"ORDER#{id}");
+        var order = await orderManager.GetOrder(id);
 
         return order == null
             ? Results.NotFound()
-            : Results.Ok(new ApiModels.Order
-            {
-                Id = id,
-                Symbol = order.Symbol,
-                Side = order.Side,
-                Amount = order.Amount,
-                Price = order.Price
-            });
+            : Results.Ok(order);
     });
 
-// create orders
+// Add orders
 app.MapPost(
     "/orders/{id:int}",
-    async (int id, [FromBody] ApiModels.CreateUpdateOrder order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    async (int id, [FromBody] ApiModels.AddOrder order, [FromServices] IOrderManager orderManager) =>
     {
         try
         {
-            var createOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
-            {
-                Id = id.ToString(),
-                Symbol = order.Symbol,
-                Side = order.Side,
-                Amount = order.Amount,
-                Price = order.Price,
-                EntityType = "ORDER",
-                Pk = $"ORDER#{id}",
-                Sk = $"ORDER#{id}",
-                Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
-                Gsi1Price = $"{order.Price:0000000}"
-            });
-
-            await dynamoDbContext.GetTargetTable<DataModels.Order>().PutItemAsync(
-                createOrderDocument,
-                createItemOperationConfig);
-
+            await orderManager.AddOrder(id, order.Symbol, order.Side, order.Amount, order.Price);
             return Results.Created();
         }
-        catch (ConditionalCheckFailedException)
+        catch (OrderManagerException ex)
         {
-            return Results.Conflict("An Order with the same ID already exists.");
+            return Results.Conflict(ex.Message);
         }
     });
 
-// update orders
+// Modify orders
 app.MapPut(
     "/orders/{id:int}",
-    async (int id, [FromBody] ApiModels.CreateUpdateOrder order, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] IAmazonDynamoDB amazonDynamoDbClient, [FromServices] ILogger<Program> logger) =>
+    async (int id, [FromBody] ApiModels.ModifyOrder order, [FromServices] IOrderManager orderManager) =>
     {
         try
         {
-            var updatedOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
-            {
-                Id = id.ToString(),
-                Symbol = order.Symbol,
-                Side = order.Side,
-                Amount = order.Amount,
-                Price = order.Price,
-                EntityType = "ORDER",
-                Pk = $"ORDER#{id}",
-                Sk = $"ORDER#{id}",
-                Gsi1SymbolSide = $"{order.Symbol}#{order.Side}",
-                Gsi1Price = $"{order.Price:0000000}"
-            });
-
-            await dynamoDbContext.GetTargetTable<DataModels.Order>().UpdateItemAsync(
-                updatedOrderDocument,
-                updateItemOperationConfig);
-
+            await orderManager.ModifyOrder(id, order.Amount, order.Price);
             return Results.Ok();
         }
-        catch(ConditionalCheckFailedException)
+        catch(OrderManagerException)
         {
             return Results.NotFound("Order does not exist.");
         }
@@ -245,7 +193,7 @@ app.MapDelete(
 
 app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
-        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] IAmazonDynamoDB dynamoDbClient, [FromServices] ILogger<Program> logger) =>
+        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
         var orderQuery =
             dynamoDbContext.QueryAsync<DataModels.Order>(
