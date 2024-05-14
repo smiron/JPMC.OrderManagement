@@ -14,4 +14,6 @@ public interface IOrderManager
     Task ModifyOrder(int orderId, int amount, int price);
 
     Task RemoveOrder(int orderId);
+
+    Task<int> CalculatePrice(string symbol, Side side, int amount);
 }

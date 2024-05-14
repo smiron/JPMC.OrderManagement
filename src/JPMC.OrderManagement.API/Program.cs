@@ -286,54 +286,27 @@ app.MapPost("/trade",
 
 app.MapPost("/trade/price",
     async ([FromBody] ApiModels.Trade trade,
-        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+        [FromServices] IOrderManager orderManager) =>
     {
-        var orderQuery =
-            dynamoDbContext.QueryAsync<DataModels.Order>(
-                $"{trade.Symbol}#{trade.Side}",
-                new DynamoDBOperationConfig
-                {
-                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
-                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
-                    BackwardQuery = trade.Side == ApiModels.Side.Sell,
-                    IndexName = "GSI1"
-                });
-
-        int fulfilledAmount = 0;
-        int calculatedPrice = 0;
-
-        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
-        while (!orderQuery.IsDone && fulfilledAmount < trade.Amount)
+        try
         {
-            var ordersPage = await orderQuery.GetNextSetAsync();
-
-            foreach (var order in ordersPage)
-            {
-                int orderFulfilledAmount = trade.Amount - fulfilledAmount > order.Amount ? order.Amount : trade.Amount - fulfilledAmount;
-                calculatedPrice += orderFulfilledAmount * order.Price;
-                fulfilledAmount += orderFulfilledAmount;
-
-                if (fulfilledAmount >= trade.Amount)
-                {
-                    // End the order processing loop early if we've already fulfilled the trade amount
-                    break;
-                }
-            }
-        }
-
-        return fulfilledAmount < trade.Amount
-            ? Results.Ok(new ApiModels.TradePrice
-            {
-                Timestamp = DateTime.UtcNow,
-                Successful = false,
-                Reason = "The order book doesn't have enough orders to satisfy the required trade amount. Please retry at a later time."
-            })
-            : Results.Ok(new ApiModels.TradePrice
+            var tradePrice = await orderManager.CalculatePrice(trade.Symbol, trade.Side, trade.Amount);
+            return Results.Ok(new ApiModels.TradePrice
             {
                 Timestamp = DateTime.UtcNow,
                 Successful = true,
-                Price = calculatedPrice
+                Price = tradePrice
             });
+        }
+        catch (OrderManagerException ex)
+        {
+            return Results.Ok(new ApiModels.TradePrice
+            {
+                Timestamp = DateTime.UtcNow,
+                Successful = false,
+                Reason = ex.Message
+            });
+        }
     });
 
 app.Run();
