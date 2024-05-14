@@ -36,16 +36,6 @@ if (xrayEnable)
     AWSSDKHandler.RegisterXRayForAllServices();    
 }
 
-
-
-var deleteItemOperationConfig = new DeleteItemOperationConfig
-{
-    ConditionalExpression = new Expression
-    {
-        ExpressionStatement = "attribute_exists(ID)"
-    }
-};
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddAWSService<IAmazonDynamoDB>()
@@ -166,26 +156,17 @@ app.MapPut(
         }
     });
 
-// delete orders
+// Remove orders
 app.MapDelete(
     "/orders/{id:int}",
-    async (int id, [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    async (int id, [FromServices] IOrderManager orderManager) =>
     {
         try
         {
-            var deleteOrderDocument = dynamoDbContext.ToDocument(new DataModels.Order
-            {
-                Pk = $"ORDER#{id}",
-                Sk = $"ORDER#{id}"
-            });
-
-            await dynamoDbContext.GetTargetTable<DataModels.Order>().DeleteItemAsync(
-                deleteOrderDocument,
-                deleteItemOperationConfig);
-
+            await orderManager.RemoveOrder(id);
             return Results.Ok();
         }
-        catch (ConditionalCheckFailedException)
+        catch (OrderManagerException)
         {
             return Results.NotFound("Order does not exist.");
         }

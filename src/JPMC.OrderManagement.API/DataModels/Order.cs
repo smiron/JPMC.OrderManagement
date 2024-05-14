@@ -11,6 +11,11 @@ public class Order : EntityBase
     private Side _side;
     private int _price;
 
+    public Order()
+    {
+        EntityType = "ORDER";
+    }
+
     [DynamoDBProperty(Attributes.Symbol)]
     public string Symbol
     {

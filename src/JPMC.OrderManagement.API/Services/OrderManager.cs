@@ -23,6 +23,14 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
         }
     };
 
+    private readonly DeleteItemOperationConfig _deleteItemOperationConfig = new()
+    {
+        ConditionalExpression = new Expression
+        {
+            ExpressionStatement = "attribute_exists(ID)"
+        }
+    };
+
     public async Task<ApiModels.Order?> GetOrder(int orderId)
     {
         var order = await dynamoDbContext.LoadAsync<DataModels.Order>($"ORDER#{orderId}", $"ORDER#{orderId}");
@@ -71,7 +79,7 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
     {
         try
         {
-            var updatedOrder = new DataModels.Order
+            var orderToUpdate = new DataModels.Order
             {
                 Pk = $"ORDER#{orderId}",
                 Sk = $"ORDER#{orderId}",
@@ -82,17 +90,44 @@ public class OrderManager(IDynamoDBContext dynamoDbContext) : IOrderManager
 
             var updateOrderDocument = new Document
             {
-                { DataModels.Attributes.Pk, updatedOrder.Pk },
-                { DataModels.Attributes.Sk, updatedOrder.Sk },
-                { DataModels.Attributes.Id, updatedOrder.Id },
-                { DataModels.Attributes.Amount, updatedOrder.Amount },
-                { DataModels.Attributes.Price, updatedOrder.Price },
-                { DataModels.Attributes.ETag, updatedOrder.ETag },
+                { DataModels.Attributes.Pk, orderToUpdate.Pk },
+                { DataModels.Attributes.Sk, orderToUpdate.Sk },
+                { DataModels.Attributes.Id, orderToUpdate.Id },
+                { DataModels.Attributes.Amount, orderToUpdate.Amount },
+                { DataModels.Attributes.Price, orderToUpdate.Price },
+                { DataModels.Attributes.ETag, orderToUpdate.ETag },
             };
 
             await dynamoDbContext.GetTargetTable<DataModels.Order>().UpdateItemAsync(
-                updateOrderDocument, 
+                updateOrderDocument,
                 _updateItemOperationConfig);
+        }
+        catch (ConditionalCheckFailedException)
+        {
+            throw new OrderManagerException("Order does not exist.");
+        }
+    }
+
+    public async Task RemoveOrder(int orderId)
+    {
+
+        var orderToDelete = new DataModels.Order
+        {
+            Pk = $"ORDER#{orderId}",
+            Sk = $"ORDER#{orderId}"
+        };
+
+        var orderToDeleteDocument = new Document
+        {
+            { DataModels.Attributes.Pk, orderToDelete.Pk },
+            { DataModels.Attributes.Sk, orderToDelete.Sk }
+        };
+
+        try
+        {
+            await dynamoDbContext.GetTargetTable<DataModels.Order>().DeleteItemAsync(
+                orderToDeleteDocument,
+                _deleteItemOperationConfig);
         }
         catch (ConditionalCheckFailedException)
         {

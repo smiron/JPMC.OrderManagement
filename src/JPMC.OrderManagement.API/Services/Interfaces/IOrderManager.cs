@@ -12,4 +12,6 @@ public interface IOrderManager
     Task AddOrder(int orderId, string symbol, Side side, int amount, int price);
 
     Task ModifyOrder(int orderId, int amount, int price);
+
+    Task RemoveOrder(int orderId);
 }
