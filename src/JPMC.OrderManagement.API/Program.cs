@@ -243,13 +243,13 @@ app.MapDelete(
         }
     });
 
-app.MapPost("/trade/price",
+app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
         [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
     {
         // look for orders that can take the other side of the trade
-        var orderBookSide = trade.Side == ApiModels.Side.Buy 
-            ? ApiModels.Side.Sell 
+        var orderBookSide = trade.Side == ApiModels.Side.Buy
+            ? ApiModels.Side.Sell
             : ApiModels.Side.Buy;
 
         var orderQuery =
@@ -260,6 +260,45 @@ app.MapPost("/trade/price",
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index backward
                     BackwardQuery = trade.Side != ApiModels.Side.Buy,
+                    IndexName = "GSI1"
+                });
+
+        var ordersToUpdate = new List<DataModels.Order>();
+        int fulfilledAmount = 0;
+
+        // Iterate as long as there are more orders to go through, and we've not fulfilled the trade amount.
+        while (!orderQuery.IsDone && fulfilledAmount < trade.Amount)
+        {
+            var ordersPage = await orderQuery.GetNextSetAsync();
+
+            foreach (var order in ordersPage)
+            {
+                int orderFulfilledAmount = trade.Amount - fulfilledAmount > order.Amount ? order.Amount : trade.Amount - fulfilledAmount;
+                fulfilledAmount += orderFulfilledAmount;
+                order.Amount -= orderFulfilledAmount;
+                ordersToUpdate.Add(order);
+
+                if (fulfilledAmount >= trade.Amount)
+                {
+                    // End the order processing loop early if we've already fulfilled the trade amount
+                    break;
+                }
+            }
+        }
+    });
+
+app.MapPost("/trade/price",
+    async ([FromBody] ApiModels.Trade trade,
+        [FromServices] IDynamoDBContext dynamoDbContext, [FromServices] ILogger<Program> logger) =>
+    {
+        var orderQuery =
+            dynamoDbContext.QueryAsync<DataModels.Order>(
+                $"{trade.Symbol}#{trade.Side}",
+                new DynamoDBOperationConfig
+                {
+                    // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
+                    // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
+                    BackwardQuery = trade.Side == ApiModels.Side.Sell,
                     IndexName = "GSI1"
                 });
 

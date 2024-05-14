@@ -5,16 +5,8 @@ namespace JPMC.OrderManagement.API.DataModels;
 
 // TODO: inject the table name dynamically
 [DynamoDBTable("jpmc.ordermanagement")]
-public record Order
+public class Order : EntityBase
 {
-    [DynamoDBHashKey("PK")] public string Pk { get; set; } = null!;
-
-    [DynamoDBRangeKey("SK")] public string Sk { get; set; } = null!;
-
-    [DynamoDBProperty] public string EntityType { get; set; } = null!;
-
-    [DynamoDBProperty("ID")] public int Id { get; set; }
-
     [DynamoDBProperty] public string Symbol { get; set; } = null!;
 
     [DynamoDBProperty] public Side Side { get; set; }
@@ -23,7 +15,17 @@ public record Order
 
     [DynamoDBProperty] public int Amount { get; set; }
 
-    [DynamoDBProperty("GSI1PK")] public string Gsi1SymbolSide { get; set; } = null!;
+    [DynamoDBIgnore]
+    public string Gsi1SymbolSide
+    {
+        get => Gsi1Pk;
+        set => Gsi1Pk = value;
+    }
 
-    [DynamoDBProperty("GSI1SK")] public string Gsi1Price { get; set; } = null!;
+    [DynamoDBIgnore]
+    public string Gsi1Price
+    {
+        get => Gsi1Sk;
+        set => Gsi1Sk = value;
+    }
 }
