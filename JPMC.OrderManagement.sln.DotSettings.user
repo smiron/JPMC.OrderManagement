@@ -1,12 +1,12 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=4d9eafb2_002D9f70_002D4012_002Db5d4_002Dc894562714b6/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="OrderTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.DataModels.OrderTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.DateTimeServiceTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.DataModels.TradeTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.OrderManagerServiceTests.GivenAnOrderId_WhenIGetOrder_ThenIGetTheOrderData&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.OrderManagerServiceTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Controllers.OrderManagerControllerTests.GivenOrderData_WhenICallAddOrder_ThenIGetASuccessfulStatusCode&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Controllers.OrderManagerControllerTests&lt;/TestId&gt;
-  &lt;/TestAncestor&gt;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=4d9eafb2_002D9f70_002D4012_002Db5d4_002Dc894562714b6/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="OrderTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.DataModels.OrderTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.DateTimeServiceTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.DataModels.TradeTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.OrderManagerServiceTests.GivenAnOrderId_WhenIGetOrder_ThenIGetTheOrderData&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.OrderManagerServiceTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Controllers.OrderManagerControllerTests.GivenOrderData_WhenICallAddOrder_ThenIGetASuccessfulStatusCode&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Controllers.OrderManagerControllerTests&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

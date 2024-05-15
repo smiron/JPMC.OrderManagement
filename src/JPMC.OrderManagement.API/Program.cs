@@ -21,6 +21,7 @@ var configuration = new ConfigurationBuilder()
     .AddEnvironmentVariables(Constants.ComputeEnvironmentVariablesPrefix)
     .Build();
 
+var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "local";
 var xrayEnable = configuration.GetValue<bool>("XRay:Enable");
 var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
 var cloudWatchLogGroup = configuration.GetValue<string>("CloudWatchLogs:LogGroup");
@@ -76,7 +77,8 @@ builder.Services
             .AddAWSProvider(new AWSLoggerConfig
             {
                 LogGroup = cloudWatchLogGroup,
-                LibraryLogErrors = false
+                LibraryLogErrors = false,
+                LogStreamNameSuffix = environmentName
             });
     })
     .AddHttpLogging(options =>
