@@ -20,6 +20,7 @@ public class ApiContainerSettings
 {
     public string Tag { get; set; } = "latest";
 
+    // ReSharper disable once InconsistentNaming
     public int CPU { get; set; } = 1024;
 
     public int Memory { get; set; } = 2048;

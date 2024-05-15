@@ -1,13 +1,8 @@
-using Amazon.CDK.AWS.Batch;
-using Amazon.CDK.AWS.ECR;
-using Amazon.CDK.AWS.ECS;
-using Amazon.CDK.AWS.EKS;
 using Constructs;
 using JPMC.OrderManagement.Utils;
+
 using AmazonCDK = Amazon.CDK;
-using Cluster = Amazon.CDK.AWS.ECS.Cluster;
-using ClusterProps = Amazon.CDK.AWS.ECS.ClusterProps;
-using DDB = Amazon.CDK.AWS.DynamoDB;
+using Amazon.CDK.AWS.ECR;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 

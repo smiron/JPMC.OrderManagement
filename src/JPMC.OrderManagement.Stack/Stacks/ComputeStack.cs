@@ -1,13 +1,13 @@
-﻿using Amazon.CDK.AWS.ECS;
-using Amazon.CDK.AWS.Logs;
-using Constructs;
+﻿using Constructs;
 using JPMC.OrderManagement.Utils;
-using AmazonCDK = Amazon.CDK;
-using Cluster = Amazon.CDK.AWS.ECS.Cluster;
-using ClusterProps = Amazon.CDK.AWS.ECS.ClusterProps;
-using DDB = Amazon.CDK.AWS.DynamoDB;
+
+using Amazon.CDK.AWS.ECS;
+using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.IAM;
+
+using AmazonCDK = Amazon.CDK;
+using DDB = Amazon.CDK.AWS.DynamoDB;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
@@ -134,7 +134,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             ]
         }));
 
-        var apiContainer = ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
+        ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
             ContainerName = "api",
             Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository, appSettings.Service.ApiContainer.Tag),
