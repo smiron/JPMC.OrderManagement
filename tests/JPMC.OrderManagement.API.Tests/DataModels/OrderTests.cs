@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices.JavaScript;
 using JPMC.OrderManagement.API.ApiModels;
 using Order = JPMC.OrderManagement.API.DataModels.Order;
 
@@ -10,14 +9,16 @@ public class OrderTests
     internal void GivenAnOrderWithASpecificId_WhenICheckTheHashKeyAndRangeKey_ThenTheValuesAreCorrectlySet()
     {
         // Arrange
-        var order = new Order(5);
+        const int orderId = 5;
+        var order = new Order(orderId);
 
         // Act
         // nothing to do here
 
         // Assert
-        Assert.Equal("ORDER#5", order.Pk);
-        Assert.Equal("ORDER#5", order.Sk);
+        Assert.Equal(orderId.ToString(), order.Id);
+        Assert.Equal($"ORDER#{orderId}", order.Pk);
+        Assert.Equal($"ORDER#{orderId}", order.Sk);
     }
 
     [Theory]

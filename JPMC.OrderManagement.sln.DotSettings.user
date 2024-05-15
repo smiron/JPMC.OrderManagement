@@ -3,5 +3,10 @@
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.DataModels.OrderTests&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.DateTimeServiceTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.DataModels.TradeTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.OrderManagerServiceTests.GivenAnOrderId_WhenIGetOrder_ThenIGetTheOrderData&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Services.OrderManagerServiceTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Controllers.OrderManagerControllerTests.GivenOrderData_WhenICallAddOrder_ThenIGetASuccessfulStatusCode&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::8627D9F8-D846-4730-ADC4-44E00CDA7B1F::net8.0::JPMC.OrderManagement.API.Tests.Controllers.OrderManagerControllerTests&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
