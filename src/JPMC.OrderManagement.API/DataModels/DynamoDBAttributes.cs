@@ -1,6 +1,6 @@
 ﻿namespace JPMC.OrderManagement.API.DataModels;
 
-public static class DynamoDbAttributes
+internal static class DynamoDbAttributes
 {
     public const string Pk = "PK";
 

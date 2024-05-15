@@ -19,6 +19,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{5572632B-725D-47
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.Utils", "src\JPMC.OrderManagement.Utils\JPMC.OrderManagement.Utils.csproj", "{0C82BD85-22C9-4938-AD63-F12F5B5103EA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5033E641-B4F1-4C98-9040-8F5165145602}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.API.Tests", "tests\JPMC.OrderManagement.API.Tests\JPMC.OrderManagement.API.Tests.csproj", "{8627D9F8-D846-4730-ADC4-44E00CDA7B1F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +41,10 @@ Global
 		{0C82BD85-22C9-4938-AD63-F12F5B5103EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0C82BD85-22C9-4938-AD63-F12F5B5103EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0C82BD85-22C9-4938-AD63-F12F5B5103EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8627D9F8-D846-4730-ADC4-44E00CDA7B1F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8627D9F8-D846-4730-ADC4-44E00CDA7B1F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8627D9F8-D846-4730-ADC4-44E00CDA7B1F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8627D9F8-D846-4730-ADC4-44E00CDA7B1F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -45,6 +53,7 @@ Global
 		{E1FCD510-105C-4F4C-A546-19AB696EEBBE} = {CC197776-D3BF-4034-AE83-791BD7618C5A}
 		{E4F720B3-4051-4F89-A10D-AB591CC265EC} = {CC197776-D3BF-4034-AE83-791BD7618C5A}
 		{0C82BD85-22C9-4938-AD63-F12F5B5103EA} = {CC197776-D3BF-4034-AE83-791BD7618C5A}
+		{8627D9F8-D846-4730-ADC4-44E00CDA7B1F} = {5033E641-B4F1-4C98-9040-8F5165145602}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CC06B140-417F-402B-BA72-5670807BD04A}

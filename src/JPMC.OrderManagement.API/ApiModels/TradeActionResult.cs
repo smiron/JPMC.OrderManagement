@@ -1,6 +1,6 @@
 ﻿namespace JPMC.OrderManagement.API.ApiModels;
 
-public abstract class TradeActionResult
+internal abstract class TradeActionResult
 {
     public DateTime Timestamp { get; set; }
 
@@ -12,11 +12,11 @@ public abstract class TradeActionResult
     public string? Reason { get; set; }
 }
 
-public class TradePriceCalculationResult : TradeActionResult
+internal class TradePriceCalculationResult : TradeActionResult
 {
     public int? Price { get; set; }
 }
 
-public class TradePlacementResult : TradeActionResult
+internal class TradePlacementResult : TradeActionResult
 {
 }

@@ -1,6 +1,6 @@
 ﻿namespace JPMC.OrderManagement.API.ApiModels;
 
-public class Trade
+internal class Trade
 {
     public string Symbol { get; set; } = null!;
 

@@ -3,19 +3,17 @@ using JPMC.OrderManagement.API.ApiModels;
 
 namespace JPMC.OrderManagement.API.DataModels;
 
-public class Order() : EntityBase(OrderEntityType)
+internal class Order() : EntityBase(DynamoDbEntityTypes.Order)
 {
     private string _symbol = string.Empty;
     private Side _side;
     private int _price;
 
-    public const string OrderEntityType = "ORDER";
-
     public Order(int orderId) : this()
     {
         Id = orderId.ToString();
-        Pk = $"{OrderEntityType}#{orderId}";
-        Sk = $"{OrderEntityType}#{orderId}";
+        Pk = $"{DynamoDbEntityTypes.Order}#{orderId}";
+        Sk = $"{DynamoDbEntityTypes.Order}#{orderId}";
     }
 
     [DynamoDBProperty(DynamoDbAttributes.Symbol)]

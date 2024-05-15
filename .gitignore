@@ -1,6 +1,8 @@
 .vs
 src/**/bin
 src/**/obj
+tests/**/bin
+tests/**/obj
 **/*.csproj.user
 cdk.out
 .idea/

@@ -2,7 +2,7 @@
 
 namespace JPMC.OrderManagement.API.DataModels;
 
-public abstract class EntityBase(string entityType)
+internal abstract class EntityBase(string entityType)
 {
     [DynamoDBHashKey(DynamoDbAttributes.Pk)]
     public string Pk { get; set; } = null!;

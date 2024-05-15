@@ -3,6 +3,8 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.XRay.Recorder.Core;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using AWS.Logger;
+using JPMC.OrderManagement.API.Controllers;
+using JPMC.OrderManagement.API.Controllers.Interfaces;
 using JPMC.OrderManagement.API.Services;
 using JPMC.OrderManagement.API.Services.Interfaces;
 using JPMC.OrderManagement.Utils;
@@ -55,6 +57,8 @@ builder.Services
             dynamoDbOperationConfig);
     })
     .AddSingleton<IOrderManager, OrderManager>()
+    .AddSingleton<IOrderManagerController, OrderManagerController>()
+    .AddSingleton<IDateTimeService, DateTimeService>()
     .AddEndpointsApiExplorer()
     .AddOpenApiDocument(config =>
     {
@@ -112,112 +116,35 @@ if (app.Environment.IsDevelopment()
 // Read orders
 app.MapGet(
     "/orders/{id:int}",
-    async (int id, [FromServices] IOrderManager orderManager) =>
-    {
-        var order = await orderManager.GetOrder(id);
-
-        return order == null
-            ? Results.NotFound()
-            : Results.Ok(order);
-    });
+    async (int id, 
+        [FromServices] IOrderManagerController orderManager) => await orderManager.GetOrder(id));
 
 // Add orders
 app.MapPost(
     "/orders/{id:int}",
-    async (int id, [FromBody] ApiModels.AddOrder order, [FromServices] IOrderManager orderManager) =>
-    {
-        try
-        {
-            await orderManager.AddOrder(id, order.Symbol, order.Side, order.Amount, order.Price);
-            return Results.Created();
-        }
-        catch (OrderManagerException ex)
-        {
-            return Results.Conflict(ex.Message);
-        }
-    });
+    async (int id, [FromBody] ApiModels.AddOrder order, 
+        [FromServices] IOrderManagerController orderManager) => await orderManager.AddOrder(id, order.Symbol, order.Side, order.Amount, order.Price));
 
 // Modify orders
 app.MapPatch(
     "/orders/{id:int}",
-    async (int id, [FromBody] ApiModels.ModifyOrder order, [FromServices] IOrderManager orderManager) =>
-    {
-        try
-        {
-            await orderManager.ModifyOrder(id, order.Amount, order.Price);
-            return Results.Ok();
-        }
-        catch(OrderManagerException)
-        {
-            return Results.NotFound("Order does not exist.");
-        }
-    });
+    async (int id, [FromBody] ApiModels.ModifyOrder order, 
+        [FromServices] IOrderManagerController orderManager) => await orderManager.ModifyOrder(id, order.Amount, order.Price));
 
 // Remove orders
 app.MapDelete(
     "/orders/{id:int}",
-    async (int id, [FromServices] IOrderManager orderManager) =>
-    {
-        try
-        {
-            await orderManager.RemoveOrder(id);
-            return Results.Ok();
-        }
-        catch (OrderManagerException)
-        {
-            return Results.NotFound("Order does not exist.");
-        }
-    });
+    async (int id, 
+        [FromServices] IOrderManagerController orderManager) => await orderManager.RemoveOrder(id));
 
 // Trade placement
 app.MapPost("/trade",
     async ([FromBody] ApiModels.Trade trade,
-        [FromServices] IOrderManager orderManager) =>
-    {
-        try
-        {
-            await orderManager.PlaceTrade(trade.Symbol, trade.Side, trade.Amount);
-            return Results.Ok(new ApiModels.TradePlacementResult
-            {
-                Timestamp = DateTime.UtcNow,
-                Successful = true
-            });
-        }
-        catch (OrderManagerException ex)
-        {
-            return Results.Ok(new ApiModels.TradePlacementResult
-            {
-                Timestamp = DateTime.UtcNow,
-                Successful = false,
-                Reason = ex.Message
-            });
-        }
-    });
+        [FromServices] IOrderManagerController orderManager) => await orderManager.PlaceTrade(trade.Symbol, trade.Side, trade.Amount));
 
 // Trade price calculation
 app.MapPost("/trade/price",
     async ([FromBody] ApiModels.Trade trade,
-        [FromServices] IOrderManager orderManager) =>
-    {
-        try
-        {
-            var tradePrice = await orderManager.CalculatePrice(trade.Symbol, trade.Side, trade.Amount);
-            return Results.Ok(new ApiModels.TradePriceCalculationResult
-            {
-                Timestamp = DateTime.UtcNow,
-                Successful = true,
-                Price = tradePrice
-            });
-        }
-        catch (OrderManagerException ex)
-        {
-            return Results.Ok(new ApiModels.TradePriceCalculationResult
-            {
-                Timestamp = DateTime.UtcNow,
-                Successful = false,
-                Reason = ex.Message
-            });
-        }
-    });
+        [FromServices] IOrderManagerController orderManager) => await orderManager.CalculatePrice(trade.Symbol, trade.Side, trade.Amount));
 
 app.Run();

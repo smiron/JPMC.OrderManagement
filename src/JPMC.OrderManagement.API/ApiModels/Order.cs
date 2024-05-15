@@ -1,11 +1,11 @@
 ﻿namespace JPMC.OrderManagement.API.ApiModels;
 
-public class Order : AddOrder
+internal class Order : AddOrder
 {
     public int Id { get; set; }
 }
 
-public class AddOrder
+internal class AddOrder
 {
     public required string Symbol { get; set; }
 
@@ -16,14 +16,14 @@ public class AddOrder
     public required int Price { get; set; }
 }
 
-public class ModifyOrder
+internal class ModifyOrder
 {
     public required int Amount { get; set; }
 
     public required int Price { get; set; }
 }
 
-public enum Side
+internal enum Side
 {
     Buy,
     Sell

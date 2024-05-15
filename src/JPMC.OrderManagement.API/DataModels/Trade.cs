@@ -3,15 +3,13 @@ using JPMC.OrderManagement.API.ApiModels;
 
 namespace JPMC.OrderManagement.API.DataModels;
 
-public class Trade() : EntityBase(TradeEntityType)
+internal class Trade() : EntityBase(DynamoDbEntityTypes.Trade)
 {
-    public const string TradeEntityType = "TRADE";
-
     public Trade(string tradeId) : this()
     {
         Id = tradeId;
-        Pk = $"{TradeEntityType}#{tradeId}";
-        Sk = $"{TradeEntityType}#{tradeId}";
+        Pk = $"{DynamoDbEntityTypes.Trade}#{tradeId}";
+        Sk = $"{DynamoDbEntityTypes.Trade}#{tradeId}";
     }
 
     [DynamoDBProperty(DynamoDbAttributes.Symbol)] public string Symbol { get; set; } = null!;

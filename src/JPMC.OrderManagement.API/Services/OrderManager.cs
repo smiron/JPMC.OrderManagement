@@ -6,7 +6,7 @@ using JPMC.OrderManagement.API.Services.Interfaces;
 
 namespace JPMC.OrderManagement.API.Services;
 
-public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManager
+internal class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManager
 {
     private const string Gsi1IndexName = "GSI1";
 
@@ -152,6 +152,18 @@ public class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationCon
         return calculatedPrice;
     }
 
+    /// <summary>
+    /// Trade placement functionality - When a trade is placed, the application subtracts the amount bought or sold to the client from each order.
+    /// Empty orders, where amount is equal to zero, are removed from the order book.
+    /// NOTE: A transaction is being used to make the data changes.
+    /// </summary>
+    /// <param name="symbol">The trade symbol</param>
+    /// <param name="side">The trade side</param>
+    /// <param name="amount">The trade amount</param>
+    /// <returns>An async Task for placing the trade.</returns>
+    /// <exception cref="OrderManagerException">
+    /// Exceptions are thrown if the order book doesn't contain enough orders to fulfill the trade amount or if the underlying data has changed during the trade placement.
+    /// </exception>
     public async Task PlaceTrade(string symbol, Side side, int amount)
     {
         var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>(dynamoDbOperationConfig).CreateTransactWrite();
