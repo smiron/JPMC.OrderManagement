@@ -6,7 +6,7 @@ using JPMC.OrderManagement.API.Services.Interfaces;
 
 namespace JPMC.OrderManagement.API.Services;
 
-internal class OrderManager(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManager
+internal class OrderManagerService(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManagerService
 {
     private const string Gsi1IndexName = "GSI1";
 

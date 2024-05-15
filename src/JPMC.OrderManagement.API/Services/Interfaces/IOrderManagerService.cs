@@ -5,7 +5,7 @@ namespace JPMC.OrderManagement.API.Services.Interfaces;
 /// <summary>
 /// This interface reflects the OrderManager interface mentioned in the "Coding Challenge - Order Management" document.
 /// </summary>
-internal interface IOrderManager
+internal interface IOrderManagerService
 {
     Task<Order?> GetOrder(int orderId);
 

@@ -5,11 +5,11 @@ using JPMC.OrderManagement.API.Services.Interfaces;
 
 namespace JPMC.OrderManagement.API.Controllers;
 
-internal class OrderManagerController(IOrderManager orderManager, IDateTimeService dateTimeService) : IOrderManagerController
+internal class OrderManagerController(IOrderManagerService orderManagerService, IDateTimeService dateTimeService) : IOrderManagerController
 {
     public async Task<IResult> GetOrder(int orderId)
     {
-        var order = await orderManager.GetOrder(orderId);
+        var order = await orderManagerService.GetOrder(orderId);
 
         return order == null
             ? Results.NotFound()
@@ -20,7 +20,7 @@ internal class OrderManagerController(IOrderManager orderManager, IDateTimeServi
     {
         try
         {
-            await orderManager.AddOrder(orderId, symbol, side, amount, price);
+            await orderManagerService.AddOrder(orderId, symbol, side, amount, price);
             return Results.Created();
         }
         catch (OrderManagerException ex)
@@ -33,7 +33,7 @@ internal class OrderManagerController(IOrderManager orderManager, IDateTimeServi
     {
         try
         {
-            await orderManager.ModifyOrder(orderId, amount, price);
+            await orderManagerService.ModifyOrder(orderId, amount, price);
             return Results.Ok();
         }
         catch (OrderManagerException)
@@ -46,7 +46,7 @@ internal class OrderManagerController(IOrderManager orderManager, IDateTimeServi
     {
         try
         {
-            await orderManager.RemoveOrder(orderId);
+            await orderManagerService.RemoveOrder(orderId);
             return Results.Ok();
         }
         catch (OrderManagerException)
@@ -59,7 +59,7 @@ internal class OrderManagerController(IOrderManager orderManager, IDateTimeServi
     {
         try
         {
-            var tradePrice = await orderManager.CalculatePrice(symbol, side, amount);
+            var tradePrice = await orderManagerService.CalculatePrice(symbol, side, amount);
             return Results.Ok(new TradePriceCalculationResult
             {
                 Timestamp = dateTimeService.UtcNow,
@@ -82,7 +82,7 @@ internal class OrderManagerController(IOrderManager orderManager, IDateTimeServi
     {
         try
         {
-            await orderManager.PlaceTrade(symbol, side, amount);
+            await orderManagerService.PlaceTrade(symbol, side, amount);
             return Results.Ok(new TradePlacementResult
             {
                 Timestamp = dateTimeService.UtcNow,

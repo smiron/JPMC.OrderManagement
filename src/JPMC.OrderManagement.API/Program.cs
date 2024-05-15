@@ -56,7 +56,7 @@ builder.Services
             dynamoDbClient,
             dynamoDbOperationConfig);
     })
-    .AddSingleton<IOrderManager, OrderManager>()
+    .AddSingleton<IOrderManagerService, OrderManagerService>()
     .AddSingleton<IOrderManagerController, OrderManagerController>()
     .AddSingleton<IDateTimeService, DateTimeService>()
     .AddEndpointsApiExplorer()
