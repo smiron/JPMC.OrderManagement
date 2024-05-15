@@ -35,11 +35,13 @@ static class Program
         };
 
         var networkingStack = new NetworkingStack(app, appSettings, stackProps);
-        var computeStack = new ComputeStack(app, appSettings, stackProps);
+        var ciCdStack = new CiCdStack(app, appSettings, networkingStack, stackProps);
+        var computeStack = new ComputeStack(app, appSettings, networkingStack, ciCdStack, stackProps);
 
+        computeStack.AddDependency(ciCdStack);
         computeStack.AddDependency(networkingStack);
 
-        foreach (var stack in new Amazon.CDK.Stack[]{ networkingStack, computeStack })
+        foreach (var stack in new Amazon.CDK.Stack[]{ networkingStack, ciCdStack, computeStack })
         {
             CdkTags.Of(stack).Add($"user:{nameof(Constants.Owner)}", Constants.Owner);
             CdkTags.Of(stack).Add($"user:{nameof(Constants.System)}", Constants.System);

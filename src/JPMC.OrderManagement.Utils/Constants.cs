@@ -2,9 +2,10 @@
 
 public static class Constants
 {
-    public static string Owner = "JPMC";
-    public static string System = "OrderManagement";
+    public const string Owner = "JPMC";
+    public const string System = "OrderManagement";
 
+    public const string SolutionNameId = "jpmc-order-management";
     public static readonly string SolutionName = $"{Owner}.{System}";
     public static readonly string SolutionNameToLower = SolutionName.ToLowerInvariant();
 

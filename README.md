@@ -10,6 +10,24 @@ cdk bootstrap --termination-protection true
 dotnet run --launch-profile https --configuration Release --project .\src\JPMC.OrderManagement.API\
 ```
 
+## Build and publish docker container
+
+```bash
+dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
+```
+
+Replace the repository URL and docker image tag:
+
+```bash
+docker tag jpmc-order-management-api:latest 241581785256.dkr.ecr.eu-west-2.amazonaws.com/jpmc-order-management-api:1
+```
+
+Replace the repository URL and docker image tag:
+
+```bash
+docker tag jpmc-order-management-api:latest 241581785256.dkr.ecr.eu-west-2.amazonaws.com/jpmc-order-management-api:1
+```
+
 Consider the following options:
 
 - Aurora serverless

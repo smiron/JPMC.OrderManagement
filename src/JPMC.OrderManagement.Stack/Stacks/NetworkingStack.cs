@@ -4,17 +4,21 @@ using JPMC.OrderManagement.Utils;
 using AmazonCDK = Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ElasticLoadBalancingV2;
+using Protocol = Amazon.CDK.AWS.ElasticLoadBalancingV2.Protocol;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
 internal sealed class NetworkingStack : AmazonCDK.Stack
 {
+    public const int InternetPort = 80;
+    public const int ApplicationPort = 8080;
+
     internal NetworkingStack(Construct scope, AppSettings appSettings, AmazonCDK.IStackProps? stackProps = null)
         : base(scope,
             $"{Constants.Owner}-{Constants.System}-{nameof(NetworkingStack)}",
             stackProps)
     {
-        var vpc = new Vpc(this, "vpc", new VpcProps
+        Vpc = new Vpc(this, "vpc", new VpcProps
         {
             VpcName = Constants.SolutionName,
             EnableDnsHostnames = true,
@@ -29,41 +33,136 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
                     Name = "Private",
                     CidrMask = 20,
                     SubnetType = SubnetType.PRIVATE_ISOLATED
+                },
+                new SubnetConfiguration
+                {
+                    Name = "Public",
+                    CidrMask = 20,
+                    SubnetType = SubnetType.PUBLIC
                 }
             ]
         });
-
-        var loadBalancerSecurityGroup = new SecurityGroup(this, "load-balancer-sg", new SecurityGroupProps
+        
+        LoadBalancerSecurityGroup = new SecurityGroup(this, "load-balancer-sg", new SecurityGroupProps
         {
-            Vpc = vpc,
-            SecurityGroupName = "load-balancer-sg",
-            AllowAllOutbound = false,
-            AllowAllIpv6Outbound = false
+            Vpc = Vpc,
+            SecurityGroupName = "load-balancer-sg"
         });
 
-        var computeSecurityGroup = new SecurityGroup(this, "compute-sg", new SecurityGroupProps
+        ComputeSecurityGroup = new SecurityGroup(this, "compute-sg", new SecurityGroupProps
         {
-            Vpc = vpc,
-            SecurityGroupName = "compute-sg",
-            AllowAllOutbound = false,
-            AllowAllIpv6Outbound = false
+            Vpc = Vpc,
+            SecurityGroupName = "compute-sg"
         });
 
-        computeSecurityGroup.AddIngressRule(loadBalancerSecurityGroup, Port.Tcp(8080), "Allow 8080 from Load Balancer");
+        Vpc.AddInterfaceEndpoint("ecr-api-endpoint", new InterfaceVpcEndpointOptions
+        {
+            Service = InterfaceVpcEndpointAwsService.ECR,
+            PrivateDnsEnabled = true,
+            Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+            SecurityGroups = [ComputeSecurityGroup],
+            Open = true
+        });
 
-        //vpc.SelectSubnets(new SubnetSelection
-        //{
-        //    SubnetType = SubnetType.PUBLIC
-        //})
+        Vpc.AddInterfaceEndpoint("ecr-dkr-endpoint", new InterfaceVpcEndpointOptions
+        {
+            Service = InterfaceVpcEndpointAwsService.ECR_DOCKER,
+            PrivateDnsEnabled = true,
+            Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+            SecurityGroups = [ComputeSecurityGroup],
+            Open = true
+        });
 
-        //var alb = new ApplicationLoadBalancer(this, "load-balancer", new ApplicationLoadBalancerProps
-        //{
-        //    Vpc = vpc,
-        //    LoadBalancerName = Constants.SolutionName,
-        //    SecurityGroup = loadBalancerSecurityGroup,
-        //    InternetFacing = true,
-        //    IpAddressType = IpAddressType.IPV4,
-            
-        //});
+        Vpc.AddInterfaceEndpoint("cloudwatch-logs-endpoint", new InterfaceVpcEndpointOptions
+        {
+            Service = InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+            PrivateDnsEnabled = true,
+            Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+            SecurityGroups = [ComputeSecurityGroup],
+            Open = true
+        });
+
+        Vpc.AddGatewayEndpoint("s3-gateway-endpoint", new GatewayVpcEndpointOptions
+        {
+            Service = GatewayVpcEndpointAwsService.S3,
+            Subnets = [ new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED } ]
+        });
+
+        Vpc.AddGatewayEndpoint("ddb-gateway-endpoint", new GatewayVpcEndpointOptions
+        {
+            Service = GatewayVpcEndpointAwsService.DYNAMODB,
+            Subnets = [new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED }]
+        });
+
+        // Vpc.AddInterfaceEndpoint("s3-endpoint", new InterfaceVpcEndpointOptions
+        // {
+        //     Service = InterfaceVpcEndpointAwsService.S3,
+        //     PrivateDnsEnabled = true,
+        //     Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+        //     SecurityGroups = [ComputeSecurityGroup],
+        //     Open = true
+        // });
+
+        // Vpc.AddInterfaceEndpoint("secrets-manager-endpoint", new InterfaceVpcEndpointOptions
+        // {
+        //     Service = InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+        //     PrivateDnsEnabled = true,
+        //     Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+        //     SecurityGroups = [ComputeSecurityGroup],
+        //     Open = true
+        // });
+
+        ComputeSecurityGroup.AddIngressRule(LoadBalancerSecurityGroup, Port.Tcp(ApplicationPort),
+            $"Allow {ApplicationPort} from Load Balancer");
+
+        if (!string.IsNullOrEmpty(appSettings.LoadBalancer.RestrictIngressToCidr))
+        {
+            LoadBalancerSecurityGroup.AddIngressRule(Peer.Ipv4(appSettings.LoadBalancer.RestrictIngressToCidr),
+                Port.Tcp(InternetPort), $"Allow {InternetPort} from the allowed LB inbound CIDR");
+        }
+
+        var alb = new ApplicationLoadBalancer(this, "load-balancer", new ApplicationLoadBalancerProps
+        {
+            Vpc = Vpc,
+            LoadBalancerName = Constants.Owner,
+            SecurityGroup = LoadBalancerSecurityGroup,
+            InternetFacing = true,
+            IpAddressType = IpAddressType.IPV4
+        });
+
+        var albTargetGroup = new ApplicationTargetGroup(this, "ecs-target-group", new ApplicationTargetGroupProps
+        {
+            TargetGroupName = $"ecs-{Constants.Owner}-{Constants.System}",
+            Vpc = Vpc,
+            Port = ApplicationPort,
+            Protocol = ApplicationProtocol.HTTP,
+            TargetType = TargetType.IP,
+            ProtocolVersion = ApplicationProtocolVersion.HTTP1,
+            HealthCheck = new HealthCheck
+            {
+                Enabled = true,
+                Port = ApplicationPort.ToString(),
+                Interval = AmazonCDK.Duration.Seconds(30),
+                Path = "/api/health",
+                Timeout = AmazonCDK.Duration.Seconds(5),
+                UnhealthyThresholdCount = 2,
+                HealthyThresholdCount = 5,
+                Protocol = Protocol.HTTP
+            }
+        });
+
+        alb.AddListener("listener-http", new ApplicationListenerProps
+        {
+            Protocol = ApplicationProtocol.HTTP,
+            Port = InternetPort,
+            DefaultAction = ListenerAction.Forward([albTargetGroup]),
+            Open = string.IsNullOrEmpty(appSettings.LoadBalancer.RestrictIngressToCidr)
+        });
     }
+
+    public Vpc Vpc { get; private set; }
+
+    public SecurityGroup ComputeSecurityGroup { get; set; }
+    
+    public SecurityGroup LoadBalancerSecurityGroup { get; set; }
 }
