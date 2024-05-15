@@ -13,7 +13,7 @@ using Amazon.CDK.AWS.IAM;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
-internal class ComputeStack : AmazonCDK.Stack
+internal sealed class ComputeStack : AmazonCDK.Stack
 {
     internal ComputeStack(
         Construct scope, 
@@ -129,8 +129,8 @@ internal class ComputeStack : AmazonCDK.Stack
                 {
                     Sid = "AllowActions",
                     Effect = Effect.ALLOW,
-                    Actions = ["logs:CreateLogStream", "logs:PutLogEvents"],
-                    Resources = [ecsApiTaskLogGroup.LogGroupArn]
+                    Actions = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups"],
+                    Resources = [$"arn:{Partition}:logs:{Region}:{Account}:*"]
                 })
             ]
         }));
@@ -160,14 +160,7 @@ internal class ComputeStack : AmazonCDK.Stack
                     HostPort = NetworkingStack.ApplicationPort,
                     Protocol = Amazon.CDK.AWS.ECS.Protocol.TCP
                 }
-            ],
-            Logging = new AwsLogDriver(new AwsLogDriverProps
-            {
-                LogRetention = RetentionDays.ONE_WEEK,
-                Mode = AwsLogDriverMode.NON_BLOCKING,
-                StreamPrefix = "ecs-log-driver-",
-                // LogGroup = 
-            })
+            ]
         });
 
         var ecsService = new FargateService(this, "ecs-service", new FargateServiceProps
