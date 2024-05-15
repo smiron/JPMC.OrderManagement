@@ -1,4 +1,6 @@
-﻿namespace JPMC.OrderManagement.API.ApiModels;
+﻿using JPMC.OrderManagement.Utils.Models;
+
+namespace JPMC.OrderManagement.API.ApiModels;
 
 internal class Order : AddOrder
 {
@@ -21,10 +23,4 @@ internal class ModifyOrder
     public required int Amount { get; set; }
 
     public required int Price { get; set; }
-}
-
-internal enum Side
-{
-    Buy,
-    Sell
 }

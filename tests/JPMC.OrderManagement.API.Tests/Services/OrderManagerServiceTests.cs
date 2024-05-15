@@ -1,8 +1,7 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 using FakeItEasy;
-using JPMC.OrderManagement.API.ApiModels;
 using JPMC.OrderManagement.API.Services;
-
+using JPMC.OrderManagement.Utils.Models;
 using Order = JPMC.OrderManagement.API.DataModels.Order;
 
 namespace JPMC.OrderManagement.API.Tests.Services;
@@ -58,7 +57,7 @@ public class OrderManagerServiceTests
         const int orderId = 1;
         Order dynamoDbRecord = null!;
         A.CallTo(() => _dynamoDbContext
-                .LoadAsync<Order>("ORDER#1", "ORDER#1", A<DynamoDBOperationConfig>._, A<CancellationToken>._))!
+                .LoadAsync<Order>("ORDER#1", "ORDER#1", A<DynamoDBOperationConfig>._, A<CancellationToken>._))
             .Returns(dynamoDbRecord);
 
         // Act

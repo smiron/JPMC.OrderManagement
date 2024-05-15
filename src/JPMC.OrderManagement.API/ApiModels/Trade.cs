@@ -1,4 +1,6 @@
-﻿namespace JPMC.OrderManagement.API.ApiModels;
+﻿using JPMC.OrderManagement.Utils.Models;
+
+namespace JPMC.OrderManagement.API.ApiModels;
 
 internal class Trade
 {
