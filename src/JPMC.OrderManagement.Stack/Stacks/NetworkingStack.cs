@@ -19,7 +19,7 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             VpcName = Constants.SolutionName,
             EnableDnsHostnames = true,
             EnableDnsSupport = true,
-            CreateInternetGateway = false,
+            CreateInternetGateway = true,
             IpAddresses = IpAddresses.Cidr("172.31.0.0/16"),
             MaxAzs = 3,
             SubnetConfiguration =
@@ -36,7 +36,7 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
         var loadBalancerSecurityGroup = new SecurityGroup(this, "load-balancer-sg", new SecurityGroupProps
         {
             Vpc = vpc,
-            SecurityGroupName = "load-balancer",
+            SecurityGroupName = "load-balancer-sg",
             AllowAllOutbound = false,
             AllowAllIpv6Outbound = false
         });
@@ -44,7 +44,7 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
         var computeSecurityGroup = new SecurityGroup(this, "compute-sg", new SecurityGroupProps
         {
             Vpc = vpc,
-            SecurityGroupName = "load-balancer",
+            SecurityGroupName = "compute-sg",
             AllowAllOutbound = false,
             AllowAllIpv6Outbound = false
         });
