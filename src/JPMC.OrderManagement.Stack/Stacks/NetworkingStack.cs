@@ -94,24 +94,6 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             Subnets = [new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED }]
         });
 
-        // Vpc.AddInterfaceEndpoint("s3-endpoint", new InterfaceVpcEndpointOptions
-        // {
-        //     Service = InterfaceVpcEndpointAwsService.S3,
-        //     PrivateDnsEnabled = true,
-        //     Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
-        //     SecurityGroups = [ComputeSecurityGroup],
-        //     Open = true
-        // });
-
-        // Vpc.AddInterfaceEndpoint("secrets-manager-endpoint", new InterfaceVpcEndpointOptions
-        // {
-        //     Service = InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-        //     PrivateDnsEnabled = true,
-        //     Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
-        //     SecurityGroups = [ComputeSecurityGroup],
-        //     Open = true
-        // });
-
         ComputeSecurityGroup.AddIngressRule(LoadBalancerSecurityGroup, Port.Tcp(ApplicationPort),
             $"Allow {ApplicationPort} from Load Balancer");
 
@@ -130,7 +112,7 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             IpAddressType = IpAddressType.IPV4
         });
 
-        var albTargetGroup = new ApplicationTargetGroup(this, "ecs-target-group", new ApplicationTargetGroupProps
+        AlbTargetGroup = new ApplicationTargetGroup(this, "ecs-target-group", new ApplicationTargetGroupProps
         {
             TargetGroupName = $"ecs-{Constants.Owner}-{Constants.System}",
             Vpc = Vpc,
@@ -155,14 +137,16 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
         {
             Protocol = ApplicationProtocol.HTTP,
             Port = InternetPort,
-            DefaultAction = ListenerAction.Forward([albTargetGroup]),
+            DefaultAction = ListenerAction.Forward([AlbTargetGroup]),
             Open = string.IsNullOrEmpty(appSettings.LoadBalancer.RestrictIngressToCidr)
         });
     }
 
     public Vpc Vpc { get; private set; }
 
-    public SecurityGroup ComputeSecurityGroup { get; set; }
+    public SecurityGroup ComputeSecurityGroup { get; private set; }
     
-    public SecurityGroup LoadBalancerSecurityGroup { get; set; }
+    public SecurityGroup LoadBalancerSecurityGroup { get; private set; }
+
+    public ApplicationTargetGroup AlbTargetGroup { get; private set; }
 }

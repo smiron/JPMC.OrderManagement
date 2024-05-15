@@ -1,6 +1,4 @@
-﻿using Amazon.CDK.AWS.Batch;
-using Amazon.CDK.AWS.ECS;
-using Amazon.CDK.AWS.EKS;
+﻿using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.Logs;
 using Constructs;
 using JPMC.OrderManagement.Utils;
@@ -52,7 +50,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             TableClass = DDB.TableClass.STANDARD
         });
 
-        ddbTable.AddGlobalSecondaryIndex(new DDB.GlobalSecondaryIndexProps
+        var ddbTableGsi1Props = new DDB.GlobalSecondaryIndexProps
         {
             IndexName = "GSI1",
             PartitionKey = new DDB.Attribute
@@ -68,7 +66,8 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             ProjectionType = DDB.ProjectionType.ALL,
             ReadCapacity = 1,
             WriteCapacity = 1
-        });
+        };
+        ddbTable.AddGlobalSecondaryIndex(ddbTableGsi1Props);
 
         var ecsApiTaskLogGroup = new LogGroup(this, "ecs-api-task-log-group", new LogGroupProps
         {
@@ -88,9 +87,9 @@ internal sealed class ComputeStack : AmazonCDK.Stack
 
         var ecsApiTask = new FargateTaskDefinition(this, "ecs-task-api", new FargateTaskDefinitionProps
         {
-            Family = $"{Constants.SolutionNameId}-service-api",
-            MemoryLimitMiB = 512,
-            Cpu = 256,
+            Family = $"{Constants.SolutionNameId}-api",
+            MemoryLimitMiB = appSettings.Service.ApiContainer.Memory,
+            Cpu = appSettings.Service.ApiContainer.CPU,
             RuntimePlatform = new RuntimePlatform
             {
                 CpuArchitecture = CpuArchitecture.X86_64,
@@ -107,15 +106,15 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                 {
                     Sid = "AllowActions",
                     Effect = Effect.ALLOW,
-                    Actions = ["dynamodb:*"],
-                    Resources = [ddbTable.TableArn]
+                    Actions = ["dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:DescribeTable"],
+                    Resources = [ddbTable.TableArn, $"{ddbTable.TableArn}/index/{ddbTableGsi1Props.IndexName}"]
                 }),
                 new PolicyStatement(new PolicyStatementProps
                 {
                     Sid = "DenyActions",
                     Effect = Effect.DENY,
                     Actions = ["dynamodb:Scan"],
-                    Resources = [ddbTable.TableArn]
+                    Resources = [ddbTable.TableArn, $"{ddbTable.TableArn}/index/{ddbTableGsi1Props.IndexName}"]
                 })
             ]
         }));
@@ -135,12 +134,12 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             ]
         }));
 
-        ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
+        var apiContainer = ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
             ContainerName = "api",
-            Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository, appSettings.Service.ContainerTag),
-            MemoryLimitMiB = 512,
-            Cpu = 256,
+            Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository, appSettings.Service.ApiContainer.Tag),
+            MemoryLimitMiB = appSettings.Service.ApiContainer.Memory,
+            Cpu = appSettings.Service.ApiContainer.CPU,
             ReadonlyRootFilesystem = true,
             Environment = new Dictionary<string, string>
             {
@@ -174,5 +173,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             TaskDefinition = ecsApiTask,
             AssignPublicIp = false
         });
+
+        ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);
     }
 }

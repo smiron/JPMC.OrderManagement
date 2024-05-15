@@ -13,7 +13,16 @@ public class AppSettings
 
 public class ServiceAppSettings
 {
-    public string ContainerTag { get; set; } = "latest";
+    public ApiContainerSettings ApiContainer { get; set; } = new();
+}
+
+public class ApiContainerSettings
+{
+    public string Tag { get; set; } = "latest";
+
+    public int CPU { get; set; } = 1024;
+
+    public int Memory { get; set; } = 2048;
 }
 
 public class LoadBalancerAppSettings

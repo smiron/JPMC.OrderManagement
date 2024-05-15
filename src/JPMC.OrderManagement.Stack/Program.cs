@@ -45,6 +45,7 @@ static class Program
         {
             CdkTags.Of(stack).Add($"user:{nameof(Constants.Owner)}", Constants.Owner);
             CdkTags.Of(stack).Add($"user:{nameof(Constants.System)}", Constants.System);
+            CdkTags.Of(stack).Add("user:Environment", appSettings.Environment);
         }
 
         app.Synth();
