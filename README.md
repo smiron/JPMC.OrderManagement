@@ -25,7 +25,7 @@ docker tag jpmc-order-management-api:latest 241581785256.dkr.ecr.eu-west-2.amazo
 Replace the repository URL and docker image tag:
 
 ```bash
-docker tag jpmc-order-management-api:latest 241581785256.dkr.ecr.eu-west-2.amazonaws.com/jpmc-order-management-api:1
+docker push 241581785256.dkr.ecr.eu-west-2.amazonaws.com/jpmc-order-management-api:1
 ```
 
 Consider the following options:

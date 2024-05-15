@@ -23,6 +23,7 @@ var configuration = new ConfigurationBuilder()
 
 var xrayEnable = configuration.GetValue<bool>("XRay:Enable");
 var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
+var cloudWatchLogGroup = configuration.GetValue<string>("CloudWatchLogs:LogGroup");
 var dynamoDbTableName = configuration.GetValue<string>("Service:DynamoDbTableName");
 
 var awsOptions = configuration.GetAWSOptions();
@@ -74,8 +75,8 @@ builder.Services
         loggingBuilder
             .AddAWSProvider(new AWSLoggerConfig
             {
-                Region = awsOptions.Region.SystemName,
-                LogGroup = $"/{Constants.Owner}/{Constants.System}/api"
+                LogGroup = cloudWatchLogGroup,
+                LibraryLogErrors = false
             });
     })
     .AddHttpLogging(options =>

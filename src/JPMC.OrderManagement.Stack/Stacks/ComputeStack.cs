@@ -9,6 +9,7 @@ using Cluster = Amazon.CDK.AWS.ECS.Cluster;
 using ClusterProps = Amazon.CDK.AWS.ECS.ClusterProps;
 using DDB = Amazon.CDK.AWS.DynamoDB;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.IAM;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
@@ -69,10 +70,13 @@ internal class ComputeStack : AmazonCDK.Stack
             WriteCapacity = 1
         });
 
-        // var logGroup = new LogGroup(this, "ecs-log-group", new LogGroupProps
-        // {
-        //     RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
-        // });
+        var ecsApiTaskLogGroup = new LogGroup(this, "ecs-api-task-log-group", new LogGroupProps
+        {
+            LogGroupName = $"/{Constants.Owner}/{Constants.System}/API",
+            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY,
+            Retention = RetentionDays.ONE_WEEK,
+            LogGroupClass = LogGroupClass.STANDARD
+        });
 
         var ecsCluster = new Cluster(this, "ecs-fargate", new ClusterProps
         {
@@ -94,6 +98,43 @@ internal class ComputeStack : AmazonCDK.Stack
             }
         });
 
+        ecsApiTask.TaskRole.AttachInlinePolicy(new Policy(this, "ecs-task-role-ddb", new PolicyProps
+        {
+            PolicyName = $"DynamoDB-{ddbTable.TableName}",
+            Statements =
+            [
+                new PolicyStatement(new PolicyStatementProps
+                {
+                    Sid = "AllowActions",
+                    Effect = Effect.ALLOW,
+                    Actions = ["dynamodb:*"],
+                    Resources = [ddbTable.TableArn]
+                }),
+                new PolicyStatement(new PolicyStatementProps
+                {
+                    Sid = "DenyActions",
+                    Effect = Effect.DENY,
+                    Actions = ["dynamodb:Scan"],
+                    Resources = [ddbTable.TableArn]
+                })
+            ]
+        }));
+
+        ecsApiTask.TaskRole.AttachInlinePolicy(new Policy(this, "ecs-task-role-cloudwatch-logs", new PolicyProps
+        {
+            PolicyName = $"CloudWatchLogs-{Constants.Owner}{Constants.System}API",
+            Statements =
+            [
+                new PolicyStatement(new PolicyStatementProps
+                {
+                    Sid = "AllowActions",
+                    Effect = Effect.ALLOW,
+                    Actions = ["logs:CreateLogStream", "logs:PutLogEvents"],
+                    Resources = [ecsApiTaskLogGroup.LogGroupArn]
+                })
+            ]
+        }));
+
         ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
             ContainerName = "api",
@@ -104,7 +145,9 @@ internal class ComputeStack : AmazonCDK.Stack
             Environment = new Dictionary<string, string>
             {
                 { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", ecsApiTaskLogGroup.LogGroupName },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
             },
             PortMappings = 
