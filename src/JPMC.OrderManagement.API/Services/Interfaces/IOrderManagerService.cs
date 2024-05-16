@@ -1,5 +1,5 @@
 ﻿using JPMC.OrderManagement.API.ApiModels;
-using JPMC.OrderManagement.Utils.Models;
+using JPMC.OrderManagement.Common.Models;
 
 namespace JPMC.OrderManagement.API.Services.Interfaces;
 

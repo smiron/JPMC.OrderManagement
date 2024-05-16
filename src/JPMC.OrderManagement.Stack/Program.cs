@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Configuration;
 
 using Amazon.CDK;
+using JPMC.OrderManagement.Common;
 using JPMC.OrderManagement.Stack.Stacks;
-using JPMC.OrderManagement.Utils;
 
 using CdkTags = Amazon.CDK.Tags;
 using Environment = Amazon.CDK.Environment;

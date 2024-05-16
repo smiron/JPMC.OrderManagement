@@ -1,8 +1,8 @@
 using Constructs;
-using JPMC.OrderManagement.Utils;
 
 using AmazonCDK = Amazon.CDK;
 using Amazon.CDK.AWS.ECR;
+using JPMC.OrderManagement.Common;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 

@@ -1,5 +1,5 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
-using JPMC.OrderManagement.Utils.Models;
+using JPMC.OrderManagement.Common.Models;
 
 namespace JPMC.OrderManagement.API.DataModels;
 

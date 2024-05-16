@@ -1,4 +1,4 @@
-﻿namespace JPMC.OrderManagement.Utils;
+﻿namespace JPMC.OrderManagement.Common;
 
 public static class Constants
 {

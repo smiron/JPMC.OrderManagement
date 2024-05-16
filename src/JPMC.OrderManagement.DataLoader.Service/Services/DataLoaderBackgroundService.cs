@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Globalization;
-using JPMC.OrderManagement.Utils.Models;
 using Amazon.DynamoDBv2.DataModel;
+using JPMC.OrderManagement.Common.Models;
 
 namespace JPMC.OrderManagement.DataLoader.Service.Services;
 

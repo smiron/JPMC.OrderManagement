@@ -7,7 +7,7 @@ using JPMC.OrderManagement.API.Controllers;
 using JPMC.OrderManagement.API.Controllers.Interfaces;
 using JPMC.OrderManagement.API.Services;
 using JPMC.OrderManagement.API.Services.Interfaces;
-using JPMC.OrderManagement.Utils;
+using JPMC.OrderManagement.Common;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 

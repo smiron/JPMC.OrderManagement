@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using JPMC.OrderManagement.API.ApiModels;
 using JPMC.OrderManagement.API.Services.Interfaces;
-using JPMC.OrderManagement.Utils.Models;
+using JPMC.OrderManagement.Common.Models;
 
 namespace JPMC.OrderManagement.API.Services;
 

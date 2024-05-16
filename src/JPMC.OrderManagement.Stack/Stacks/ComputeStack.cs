@@ -1,13 +1,13 @@
 ﻿using Constructs;
-using JPMC.OrderManagement.Utils;
 
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.IAM;
-
+using JPMC.OrderManagement.Common;
 using AmazonCDK = Amazon.CDK;
 using DDB = Amazon.CDK.AWS.DynamoDB;
+using Amazon.CDK.AWS.S3;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
@@ -175,5 +175,17 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         });
 
         ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);
+
+        // Blob import related infrastructure
+        var s3Bucket = new Bucket(this, "bucket", new BucketProps
+        {
+            BucketName = $"{Constants.SolutionNameId}-{appSettings.Environment}",
+            BlockPublicAccess = BlockPublicAccess.BLOCK_ALL,
+            EnforceSSL = true,
+            ObjectOwnership = ObjectOwnership.BUCKET_OWNER_ENFORCED,
+            PublicReadAccess = false,
+            Encryption = BucketEncryption.S3_MANAGED,
+            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
+        });
     }
 }

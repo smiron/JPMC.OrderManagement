@@ -1,10 +1,9 @@
 ﻿using Constructs;
-using JPMC.OrderManagement.Utils;
 
 using AmazonCDK = Amazon.CDK;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ElasticLoadBalancingV2;
-
+using JPMC.OrderManagement.Common;
 using Protocol = Amazon.CDK.AWS.ElasticLoadBalancingV2.Protocol;
 
 namespace JPMC.OrderManagement.Stack.Stacks;

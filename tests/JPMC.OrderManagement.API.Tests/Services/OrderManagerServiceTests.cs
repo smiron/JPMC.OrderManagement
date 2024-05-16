@@ -1,7 +1,7 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 using FakeItEasy;
 using JPMC.OrderManagement.API.Services;
-using JPMC.OrderManagement.Utils.Models;
+using JPMC.OrderManagement.Common.Models;
 using Order = JPMC.OrderManagement.API.DataModels.Order;
 
 namespace JPMC.OrderManagement.API.Tests.Services;
