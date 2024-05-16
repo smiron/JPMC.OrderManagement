@@ -8,9 +8,10 @@
   - [Services](#services)
     - [API Service](#api-service)
     - [Data Loader service](#data-loader-service)
+  - [DynamoDB data store](#dynamodb-data-store)
 - [Getting started](#getting-started)
   - [Software requirements](#software-requirements)
-- [Deploying the solution to AWS cloud](#deploying-the-solution-to-aws-cloud)
+  - [Deploying the solution to AWS cloud](#deploying-the-solution-to-aws-cloud)
 
 ---
 
@@ -47,19 +48,32 @@ The solution consists of two services:
 - **API Service**: This service is hosted using `Amazon ECS on AWS Fargate`. Instances of this service are continuously running and handling REST API requests from users.
 - **Data Loader Service**: This service is running on demand using `AWS Batch on AWS Fargate`. The exact process is detailed in the next section.
 
+Having two separate processes for handling API requests and Data Loading requests is important for several reasons:
+
+- **Scalability**: The two types of services can scale independently of each other.
+- **Improved user experience**: If the pressure on one service is increasing then the remaining service is unaffected. For example, attempting to batch load a significant number of records should not affect the REST API users.
+
 #### API Service
 
 #### Data Loader service
 
 Batch loading orders process:
 
-- The user obtains a presigned Url to an Amazon S3 prefix and uploads a CSV file.
-- Once the upload is complete, an event is published to `Amazon EventBridge`.
-- `Amazon EventBridge` consumes the message and queues an `AWS Batch Job` for processing the uploaded CSV file.
-- The Data Loader container follows a two stage process to process the file:
+- **Data Upload to Amazon S3**: The user obtains a presigned Url pointing to an `Amazon S3` prefix. The user uploads the `orders` in CSV format to the presigned Url.
+- **S3 to EventBridge**: Once the upload is complete, `Amazon S3` publishes an event to `Amazon EventBridge`.
+- **Queue a data loader job**: `Amazon EventBridge` consumes the message and enqueues an `AWS Batch Job` for processing the CSV file.
+- The `Data Loader service` follows a two stage process to load the data into the system:
 
     1. **Download data**: It first downloads the data locally in ephemeral storage. This is done to reduce access time to the data records and to increase reliability.
     2. **Batch Write to DynamoDB**: A batch write is initiated and the the data records are written to DynamoDB.
+
+### DynamoDB data store
+
+![Table Design](./resources/DynamoDB-Design-Table.png)
+
+![Table Design GSI1](./resources/DynamoDB-Design-Table-Index-GSI1.png)
+
+The DynamoDB table design has been authored using [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html) and is available to download from [here](./resources/DynamoDB-Design-NoSqlWorkbench.json).
 
 ## Getting started
 
@@ -72,17 +86,17 @@ Batch loading orders process:
 - [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
 - [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html)
 
-## Deploying the solution to AWS cloud
+### Deploying the solution to AWS cloud
 
 Please follow the below steps to deploy and run the solution in your AWS cloud account:
 
-1. Bootstrap the CDK framework to your AWS account
+1. Bootstrap the CDK framework to your AWS account.
 
     ```bash
     cdk bootstrap --termination-protection true
     ```
 
-2. Deploy the CI/CD stack
+2. Deploy the CI/CD stack.
 
     ```bash
     cdk deploy JPMC-OrderManagement-CiCdStack
@@ -94,7 +108,7 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
     aws ecr get-login-password --region [AWS-REGION] | docker login --username AWS --password-stdin [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com
     ```
 
-4. Build the API Docker image
+4. Build the API Docker image.
 
     ```bash
     dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
@@ -118,10 +132,8 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
     cdk deploy --all
     ```
 
-
 TODO:
 
-- Solution diagram
 - Calculate availability
 - Consider deployment scenarios (how do you update code, ECS, Redis)
 - Consider DR strategy
@@ -131,14 +143,6 @@ TODO:
 - point-in-time recovery for the data store
 - Use a Route 53 domain to host the system
 - Consider adding AuthN and AuthZ (https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html)
-- document reasons for using an API Gateway with ECS (per user throttling logic, API keys etc) (https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-private-integration.html)
 - Document what we've done ro reduce latency (ECS - eliminates lambda cold start + lambda service delay, ALB to load balance requests, single table design)
 - Enable autoscaling
-- Document usage of Single Table Design to reduce cost and latency
-- Consider event sourcing
-- Use NLB for even lower latencies
 - Item lineage via DynamoDB streams in S3
-
-Done:
-
-- Configure CloudWatch Logs logging via configuration keys
