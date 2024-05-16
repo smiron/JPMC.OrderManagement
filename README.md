@@ -1,38 +1,89 @@
 # Order Management
 
-## Bootstrap
+- [Solution](#solution)
+  - [Architecture](#architecture)
+  - [Service](#service)
+    - [DynamoDB Single-Table Design](#dynamodb-single-table-design)
+    - [ECS](#ecs)
+- [Getting started](#getting-started)
+  - [Software requirements](#software-requirements)
+- [Running the solution in AWS cloud](#running-the-solution-in-aws-cloud)
 
-```bash
-cdk bootstrap --termination-protection true
-```
+---
 
-```ps
-dotnet run --launch-profile https --configuration Release --project .\src\JPMC.OrderManagement.API\
-```
+## Solution
 
-## Build and publish docker container
+### Architecture
 
-```bash
-dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
-```
+![Architecture Diagram](./resources/architecture.drawio.png)
 
-Replace the repository URL and docker image tag:
+### Service
 
-```bash
-docker tag jpmc-order-management-api:latest 241581785256.dkr.ecr.eu-west-2.amazonaws.com/jpmc-order-management-api:1
-```
+#### DynamoDB Single-Table Design
 
-Replace the repository URL and docker image tag:
+The solution is using DynamoDB with the single-table design pattern as the data store.
 
-```bash
-docker push 241581785256.dkr.ecr.eu-west-2.amazonaws.com/jpmc-order-management-api:1
-```
+#### ECS
 
-Consider the following options:
+To reduce latency and cost.
 
-- Aurora serverless
-- Redis
-- RDS with ElastiCache
+## Getting started
+
+### Software requirements
+
+- Docker
+- AWS CLI
+- AWS CDK
+- DOTNET SDK 8
+- Visual Studio 2022
+- [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html)
+
+## Running the solution in AWS cloud
+
+Please follow the below steps to deploy and run the solution in your AWS cloud account:
+
+1. Bootstrap the CDK framework to your AWS account
+
+    ```bash
+    cdk bootstrap --termination-protection true
+    ```
+
+2. Deploy the CI/CD stack
+
+    ```bash
+    cdk deploy JPMC-OrderManagement-CiCdStack
+    ```
+
+3. Authenticate to the newly create ECR repository. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
+
+    ```bash
+    aws ecr get-login-password --region [AWS-REGION] | docker login --username AWS --password-stdin [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com
+    ```
+
+4. Build the API Docker image
+
+    ```bash
+    dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
+    ```
+
+5. Tag the new image with the ECR repository URL. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
+
+    ```bash
+    docker tag jpmc-order-management-api:latest [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
+    ```
+
+6. Push the image to ECR. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
+
+    ```bash
+    docker push [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
+    ```
+
+7. Deploy the networking and the compute stacks.
+
+    ```bash
+    cdk deploy --all
+    ```
+
 
 TODO:
 
