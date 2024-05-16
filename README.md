@@ -7,6 +7,7 @@
   - [Design considerations](#design-considerations)
     - [DynamoDB Single-Table Design](#dynamodb-single-table-design)
     - [Amazon ECS on AWS Fargate](#amazon-ecs-on-aws-fargate)
+    - [Amazon Batch on AWS Fargate](#amazon-batch-on-aws-fargate)
     - [Private Connectivity](#private-connectivity)
   - [Services](#services)
     - [API Service](#api-service)
@@ -92,11 +93,18 @@ More details regarding the single-table design pattern are available at [The Wha
 
 #### Amazon ECS on AWS Fargate
 
-`Amazon ECS on AWS Fargate` has been chosen as the compute platform for the solution as it presents several advantages in the context of the requirements:
+`Amazon ECS on AWS Fargate` has been chosen as the compute platform for the REST API as it presents several advantages in the context of the requirements:
 
 - **Reduced API latency**: Containers are always running and prepared to process requests. There is no service related latency or overhead.
 - **Reduced operational overhead**: There are no instances to manage. The service automatically provisions the required underlying infrastructure to run the containers.
 - **Scalability**: ECS automatically scales up and down the number of containers to satisfy the workload being placed on the service.
+
+#### Amazon Batch on AWS Fargate
+
+`Amazon Batch on AWS Fargate` has been chosen as the compute platform for the batch import functionality. There are two main reasons for this:
+
+- **Import duration**: We don't have control over the number of records included in a batch import job. Therefore, the batch import job duration can be significant. This is the reason for which AWS Lambda was discounted as a solution.
+- **Reduced operational overhead**: There are no instances to manage. The service automatically provisions the required underlying infrastructure to run the containers.
 
 #### Private Connectivity
 
