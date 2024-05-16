@@ -16,6 +16,7 @@ internal class DataLoaderBackgroundService(
     IOptions<DataLoaderJobOptions> jobOptions,
     IAmazonS3 amazonS3Client,
     IDynamoDBContext dynamoDbContext,
+    DynamoDBOperationConfig dynamoDbOperationConfig,
     ILogger<DataLoaderBackgroundService> logger)
     : BackgroundService
 {
@@ -33,10 +34,30 @@ internal class DataLoaderBackgroundService(
 
         var orderLines = csvReader.GetRecordsAsync<OrderLine>(stoppingToken);
 
-        //dynamoDbContext.CreateBatchWrite<>()
+        var batchWrite = dynamoDbContext.CreateBatchWrite<Order>(dynamoDbOperationConfig);
 
+        // TODO: there might be a significant amount of data in the CSV file. We need to limit the maximum number of records we add to a batch
         await foreach (var orderLine in orderLines)
         {
+            var order = new Order(orderLine.OrderId)
+            {
+                Side = orderLine.Side,
+                Symbol = orderLine.Symbol,
+                Amount = orderLine.Amount,
+                Price = orderLine.Price
+            };
+
+            batchWrite.AddPutItem(order);
+        }
+
+        try
+        {
+            await batchWrite.ExecuteAsync(stoppingToken);
+            logger.LogInformation("Data load complete.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Data load encountered an error: {ErrorMessage}. Exception: {Exception}", ex.Message, ex);
         }
     }
 
@@ -73,7 +94,7 @@ public class OrderLine
 {
     [Name("orderId")]
     [Index(0)]
-    public required string OrderId { get; set; }
+    public required int OrderId { get; set; }
 
     [Name("symbol")]
     [Index(1)]

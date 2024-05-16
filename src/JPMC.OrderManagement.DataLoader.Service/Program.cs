@@ -23,7 +23,6 @@ builder.Configuration
 
 builder.Services
     .AddHostedService<DataLoaderBackgroundService>()
-    .AddDefaultAWSOptions(provider => provider.GetRequiredService<IConfigurationRoot>().GetAWSOptions())
     .AddAWSService<IAmazonS3>()
     .AddAWSService<IAmazonDynamoDB>()
     .AddSingleton(provider =>
