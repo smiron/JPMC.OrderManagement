@@ -2,7 +2,7 @@
 using JPMC.OrderManagement.API.Controllers.Interfaces;
 using JPMC.OrderManagement.API.Services;
 using JPMC.OrderManagement.API.Services.Interfaces;
-using JPMC.OrderManagement.Common.Models;
+using JPMC.OrderManagement.Common.DataModels;
 
 namespace JPMC.OrderManagement.API.Controllers;
 

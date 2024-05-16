@@ -1,9 +1,8 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
-using JPMC.OrderManagement.Common.Models;
 
-namespace JPMC.OrderManagement.API.DataModels;
+namespace JPMC.OrderManagement.Common.DataModels;
 
-internal class Trade() : EntityBase(DynamoDbEntityTypes.Trade)
+public class Trade() : EntityBase(DynamoDbEntityTypes.Trade)
 {
     public Trade(string tradeId) : this()
     {

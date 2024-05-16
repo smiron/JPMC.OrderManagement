@@ -1,8 +1,8 @@
 ﻿using JPMC.OrderManagement.API.Controllers;
 using JPMC.OrderManagement.API.Services.Interfaces;
 using FakeItEasy;
-using JPMC.OrderManagement.Common.Models;
 using Microsoft.AspNetCore.Http;
+using JPMC.OrderManagement.Common.DataModels;
 
 namespace JPMC.OrderManagement.API.Tests.Controllers;
 

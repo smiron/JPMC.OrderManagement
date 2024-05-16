@@ -1,4 +1,4 @@
-﻿using JPMC.OrderManagement.Common.Models;
+﻿using JPMC.OrderManagement.Common.DataModels;
 
 namespace JPMC.OrderManagement.API.ApiModels;
 

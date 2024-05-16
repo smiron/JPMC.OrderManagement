@@ -1,6 +1,5 @@
-using JPMC.OrderManagement.API.ApiModels;
-using JPMC.OrderManagement.Common.Models;
-using Order = JPMC.OrderManagement.API.DataModels.Order;
+using JPMC.OrderManagement.Common.DataModels;
+using Order = JPMC.OrderManagement.Common.DataModels.Order;
 
 namespace JPMC.OrderManagement.API.Tests.DataModels;
 

@@ -1,4 +1,4 @@
-using JPMC.OrderManagement.API.DataModels;
+using JPMC.OrderManagement.Common.DataModels;
 
 namespace JPMC.OrderManagement.API.Tests.DataModels;
 

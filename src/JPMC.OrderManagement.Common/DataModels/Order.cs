@@ -1,9 +1,8 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
-using JPMC.OrderManagement.Common.Models;
 
-namespace JPMC.OrderManagement.API.DataModels;
+namespace JPMC.OrderManagement.Common.DataModels;
 
-internal class Order() : EntityBase(DynamoDbEntityTypes.Order)
+public class Order() : EntityBase(DynamoDbEntityTypes.Order)
 {
     private string _symbol = string.Empty;
     private Side _side;

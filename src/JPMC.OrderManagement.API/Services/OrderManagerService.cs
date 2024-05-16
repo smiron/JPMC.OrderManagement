@@ -1,9 +1,10 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
-using JPMC.OrderManagement.API.ApiModels;
 using JPMC.OrderManagement.API.Services.Interfaces;
-using JPMC.OrderManagement.Common.Models;
+using DataModels = JPMC.OrderManagement.Common.DataModels;
+using Order = JPMC.OrderManagement.API.ApiModels.Order;
+using Side = JPMC.OrderManagement.Common.DataModels.Side;
 
 namespace JPMC.OrderManagement.API.Services;
 
@@ -172,7 +173,7 @@ internal class OrderManagerService(IDynamoDBContext dynamoDbContext, DynamoDBOpe
 
         var tradeId = Guid.NewGuid().ToString("D");
         tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade(tradeId)
-            {
+{
                 Amount = amount,
                 Side = side,
                 Symbol = symbol

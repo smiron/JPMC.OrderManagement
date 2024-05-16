@@ -1,4 +1,4 @@
-﻿namespace JPMC.OrderManagement.API.DataModels;
+﻿namespace JPMC.OrderManagement.Common.DataModels;
 
 internal static class DynamoDbEntityTypes
 {

@@ -1,5 +1,6 @@
 ﻿using JPMC.OrderManagement.API.ApiModels;
-using JPMC.OrderManagement.Common.Models;
+
+using Side = JPMC.OrderManagement.Common.DataModels.Side;
 
 namespace JPMC.OrderManagement.API.Services.Interfaces;
 

@@ -1,8 +1,8 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 
-namespace JPMC.OrderManagement.API.DataModels;
+namespace JPMC.OrderManagement.Common.DataModels;
 
-internal abstract class EntityBase(string entityType)
+public abstract class EntityBase(string entityType)
 {
     [DynamoDBHashKey(DynamoDbAttributes.Pk)]
     public string Pk { get; set; } = null!;
