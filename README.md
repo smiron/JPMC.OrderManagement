@@ -95,7 +95,7 @@ More details regarding the single-table design pattern are available at [The Wha
 
 `Amazon ECS on AWS Fargate` has been chosen as the compute platform for the REST API as it presents several advantages in the context of the requirements:
 
-- **Reduced API latency**: Containers are always running and prepared to process requests. There is no service related latency or overhead.
+- **Reduced API latency**: Containers are always running and prepared to process requests. There is no service related latency or overhead. This is the reason for which AWS Lambda was discounted as a solution.
 - **Reduced operational overhead**: There are no instances to manage. The service automatically provisions the required underlying infrastructure to run the containers.
 - **Scalability**: ECS automatically scales up and down the number of containers to satisfy the workload being placed on the service.
 
@@ -129,8 +129,12 @@ The API service hosts a REST API for managing orders, calculating trade a price,
 Endpoints:
 
 - `GET /api/orders/{id}`: Retrieve the order with the specified `id`.
+  
+    Response codes:
+  - `200` - The order was found successfully retrieved.
+  - `404` - An order with the requested ID doesn't exist.
 
-    Example return data:
+  Example response payload:
 
     ```json
     {
@@ -143,8 +147,12 @@ Endpoints:
     ```
 
 - `POST /api/orders/{id}`: Create an order with the specified `id` and payload.
+  
+    Response codes:
+  - `201` - The order was found successfully created.
+  - `409` - An order with the same ID already exists.
 
-    Example payload that can be used to create an order:
+    Example request payload:
 
     ```json
     {
@@ -156,8 +164,12 @@ Endpoints:
     ```
 
 - `PATCH /api/orders/{id}`: Modify an order with the specified `id` and payload.
+  
+    Response codes:
+  - `200` - The order was found and has been successfully patched.
+  - `404` - An order with the requested ID doesn't exist.
 
-    Example payload that can be used to amend an order:
+    Example request payload:
 
     ```json
     {
@@ -167,10 +179,17 @@ Endpoints:
     ```
 
 - `DELETE /api/orders/{id}`: Delete the order with the specified `id`.
+  
+    Response codes:
+  - `200` - The order was found and has been successfully removed.
+  - `404` - An order with the requested ID doesn't exist.
 
 - `POST /api/trade`: Create a trade with the specified payload.
+  
+    Response codes:
+  - `200` - A trade placement reply has been successfully generated.
 
-    Example payload that can be used to create a trade:
+    Example request payload:
 
     ```json
     {
@@ -180,7 +199,7 @@ Endpoints:
     }
     ```
 
-    Example return data:
+    Example response payload:
 
     ```json
     {
@@ -193,8 +212,11 @@ Endpoints:
     If a trade can't be constructed for any reason then the `successful` field is set to false and the `reason` field will contain details regarding the issue (e.g.: not enough orders to construct a trade).
 
 - `POST /api/price`: Price a trade with the specified payload.
+  
+    Response codes:
+  - `200` - A trade price reply has been successfully generated.
 
-    Example payload that can be used to create a trade:
+    Example request payload:
 
     ```json
     {
@@ -204,7 +226,7 @@ Endpoints:
     }
     ```
 
-    Example return data:
+    Example response payload:
 
     ```json
     {
