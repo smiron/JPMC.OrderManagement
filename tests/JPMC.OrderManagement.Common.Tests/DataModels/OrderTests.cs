@@ -1,7 +1,7 @@
 using JPMC.OrderManagement.Common.DataModels;
 using Order = JPMC.OrderManagement.Common.DataModels.Order;
 
-namespace JPMC.OrderManagement.API.Tests.DataModels;
+namespace JPMC.OrderManagement.Common.Tests.DataModels;
 
 public class OrderTests
 {

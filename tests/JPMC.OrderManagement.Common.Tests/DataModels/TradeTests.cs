@@ -1,6 +1,6 @@
 using JPMC.OrderManagement.Common.DataModels;
 
-namespace JPMC.OrderManagement.API.Tests.DataModels;
+namespace JPMC.OrderManagement.Common.Tests.DataModels;
 
 public class TradeTests
 {
