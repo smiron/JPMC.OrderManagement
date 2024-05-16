@@ -2,12 +2,15 @@
 
 - [Solution](#solution)
   - [Architecture](#architecture)
-  - [Service](#service)
+  - [Design considerations](#design-considerations)
     - [DynamoDB Single-Table Design](#dynamodb-single-table-design)
-    - [ECS](#ecs)
+    - [Amazon ECS on AWS Fargate](#amazon-ecs-on-aws-fargate)
+  - [Services](#services)
+    - [API Service](#api-service)
+    - [Data Loader service](#data-loader-service)
 - [Getting started](#getting-started)
   - [Software requirements](#software-requirements)
-- [Running the solution in AWS cloud](#running-the-solution-in-aws-cloud)
+- [Deploying the solution to AWS cloud](#deploying-the-solution-to-aws-cloud)
 
 ---
 
@@ -17,28 +20,59 @@
 
 ![Architecture Diagram](./resources/architecture.drawio.png)
 
-### Service
+### Design considerations
 
 #### DynamoDB Single-Table Design
 
-The solution is using DynamoDB with the single-table design pattern as the data store.
+The solution is using DynamoDB with the single-table design pattern as the data store. Using this pattern has several benefits including:
 
-#### ECS
+- **Reduced latency**: Latency is significantly reduced when employing the single-table design pattern as it directly leads to a reduction in the number of round-trips to DynamoDB.
+- **Reduced operational overhead**: "*Even though DynamoDB is fully-managed and pretty hands-off compared to a relational database, you still need to configure alarms, monitor metrics, etc. If you have one table with all items in it rather than eight separate tables, you reduce the number of alarms and metrics to watch.*"
+- **Reduced operational cost**: "*With each table you have, you need to provision read and write capacity units. Often you will do some back-of-the-envelope math on the traffic you expect, bump it up by X%, and convert it to RCUs and WCUs. If you have one or two entity types in your single table that are accessed much more frequently than the others, you can hide some of the extra capacity for less-frequently accessed items in the buffer for the other items.*"
 
-To reduce latency and cost.
+More details regarding the single-table design pattern are available at [The What, Why, and When of Single-Table Design with DynamoDB](https://www.alexdebrie.com/posts/dynamodb-single-table/).
+
+#### Amazon ECS on AWS Fargate
+
+`Amazon ECS on AWS Fargate` has been chosen as the compute platform for the solution as it presents several advantages in the context of the requirements:
+
+- **Reduced API latency**: Containers are always running and prepared to process requests. There is no service related latency or overhead.
+- **Reduced operational overhead**: There are no instances to manage. The service automatically provisions the required underlying infrastructure to run the containers.
+- **Scalability**: ECS automatically scales up and down the number of containers to satisfy the workload being placed on the service.
+
+### Services
+
+The solution consists of two services:
+
+- **API Service**: This service is hosted using `Amazon ECS on AWS Fargate`. Instances of this service are continuously running and handling REST API requests from users.
+- **Data Loader Service**: This service is running on demand using `AWS Batch on AWS Fargate`. The exact process is detailed in the next section.
+
+#### API Service
+
+#### Data Loader service
+
+Batch loading orders process:
+
+- The user obtains a presigned Url to an Amazon S3 prefix and uploads a CSV file.
+- Once the upload is complete, an event is published to `Amazon EventBridge`.
+- `Amazon EventBridge` consumes the message and queues an `AWS Batch Job` for processing the uploaded CSV file.
+- The Data Loader container follows a two stage process to process the file:
+
+    1. **Download data**: It first downloads the data locally in ephemeral storage. This is done to reduce access time to the data records and to increase reliability.
+    2. **Batch Write to DynamoDB**: A batch write is initiated and the the data records are written to DynamoDB.
 
 ## Getting started
 
 ### Software requirements
 
-- Docker
-- AWS CLI
-- AWS CDK
-- DOTNET SDK 8
-- Visual Studio 2022
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [AWS CDK](https://aws.amazon.com/cdk/)
+- [DOTNET SDK 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
 - [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html)
 
-## Running the solution in AWS cloud
+## Deploying the solution to AWS cloud
 
 Please follow the below steps to deploy and run the solution in your AWS cloud account:
 
