@@ -204,6 +204,10 @@ Endpoints:
 
     If a trade price can't be constructed for any reason then the `successful` field is set to false and the `reason` field will contain details regarding the issue (e.g.: not enough orders to price a trade).
 
+The API service has an overall sub 5 ms response time as can be observed in the below capture from CloudWatch Logs.
+
+![API-Latency-CloudWatchLogs](./resources/API-Latency-CloudWatchLogs.png)
+
 #### Data Loader service
 
 Batch loading orders process:
