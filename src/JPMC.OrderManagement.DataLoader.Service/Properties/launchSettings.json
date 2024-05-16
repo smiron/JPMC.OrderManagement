@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "import-sample-data": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "AWS_REGION": "eu-west-2"
+      }
+    }
+  }
+}
