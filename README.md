@@ -100,7 +100,7 @@ More details regarding the single-table design pattern are available at [The Wha
 
 #### Private Connectivity
 
-You may notice that the solution diagram doesn't require a NAT Gateway. The reason for this is that the solution provisions gateway and interface endpoints for all AWS services used from the private subnets. Therefore the CDK `NetworkingStack` stack provisions interface endpoints for `ECR` and `CloudWatch Logs` and gateway endpoints for `S3` and `DynamoDB`.
+You may notice that the solution diagram doesn't require a NAT Gateway. The reason for this is that the solution provisions gateway and interface endpoints for all AWS services used from the private subnets. Therefore the CDK `NetworkingStack` stack provisions interface endpoints for `Amazon ECR` and `Amazon CloudWatch Logs` and gateway endpoints for `Amazon S3` and `Amazon DynamoDB`.
 
 ### Services
 
