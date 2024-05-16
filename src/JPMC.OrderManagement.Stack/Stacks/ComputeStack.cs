@@ -1,4 +1,6 @@
-﻿using Constructs;
+﻿using Amazon.CDK.AWS.ApplicationAutoScaling;
+using Amazon.CDK.AWS.Batch;
+using Constructs;
 
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.Logs;
@@ -8,11 +10,23 @@ using JPMC.OrderManagement.Common;
 using AmazonCDK = Amazon.CDK;
 using DDB = Amazon.CDK.AWS.DynamoDB;
 using Amazon.CDK.AWS.S3;
+using LogGroupProps = Amazon.CDK.AWS.Logs.LogGroupProps;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
 internal sealed class ComputeStack : AmazonCDK.Stack
 {
+    private readonly DDB.EnableScalingProps DynamoDbAutoScaling = new() 
+    {
+        MinCapacity = 1,
+        MaxCapacity = 10
+    };
+
+    private readonly DDB.UtilizationScalingProps DynamoDbUtilizationScalingProps = new()
+    {
+        TargetUtilizationPercent = 80
+    };
+    
     internal ComputeStack(
         Construct scope, 
         AppSettings appSettings,
@@ -41,8 +55,6 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY,
             Encryption = DDB.TableEncryption.AWS_MANAGED,
             BillingMode = DDB.BillingMode.PROVISIONED,
-            ReadCapacity = 1,
-            WriteCapacity = 1,
             PointInTimeRecovery = false,
             DeletionProtection = true,
             ContributorInsightsEnabled = false,
@@ -63,15 +75,27 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                 Name = "GSI1SK",
                 Type = DDB.AttributeType.STRING
             },
-            ProjectionType = DDB.ProjectionType.ALL,
-            ReadCapacity = 1,
-            WriteCapacity = 1
+            ProjectionType = DDB.ProjectionType.ALL
         };
         ddbTable.AddGlobalSecondaryIndex(ddbTableGsi1Props);
+        
+        ddbTable.AutoScaleReadCapacity(DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleWriteCapacity(DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
 
+        ddbTable.AutoScaleGlobalSecondaryIndexReadCapacity(ddbTableGsi1Props.IndexName, DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleGlobalSecondaryIndexWriteCapacity(ddbTableGsi1Props.IndexName, DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        
         var ecsApiTaskLogGroup = new LogGroup(this, "ecs-api-task-log-group", new LogGroupProps
         {
             LogGroupName = $"/{Constants.Owner}/{Constants.System}/API",
+            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY,
+            Retention = RetentionDays.ONE_WEEK,
+            LogGroupClass = LogGroupClass.STANDARD
+        });
+
+        var batchDataLoaderTaskLogGroup = new LogGroup(this, "batch-data-loader-task-log-group", new LogGroupProps
+        {
+            LogGroupName = $"/{Constants.Owner}/{Constants.System}/DataLoader",
             RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY,
             Retention = RetentionDays.ONE_WEEK,
             LogGroupClass = LogGroupClass.STANDARD
@@ -165,13 +189,18 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         var ecsService = new FargateService(this, "ecs-service", new FargateServiceProps
         {
             Cluster = ecsCluster,
-            DesiredCount = 1,
             PlatformVersion = FargatePlatformVersion.LATEST,
             ServiceName = Constants.SolutionNameId,
             SecurityGroups = [ networkingStack.ComputeSecurityGroup ],
             VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
             TaskDefinition = ecsApiTask,
             AssignPublicIp = false
+        });
+
+        ecsService.AutoScaleTaskCount(new EnableScalingProps
+        {
+            MinCapacity = 1,
+            MaxCapacity = 5
         });
 
         ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);
@@ -186,6 +215,58 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             PublicReadAccess = false,
             Encryption = BucketEncryption.S3_MANAGED,
             RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
+        });
+
+        var batchEnvironment = new FargateComputeEnvironment(this, "batch-service",
+            new FargateComputeEnvironmentProps
+            {
+                ComputeEnvironmentName = $"{Constants.SolutionNameId}-{appSettings.Environment}",
+                Enabled = true,
+                MaxvCpus = 1,
+                Spot = true,
+                Vpc = networkingStack.Vpc,
+                SecurityGroups = [networkingStack.ComputeSecurityGroup],
+                VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+                UpdateToLatestImageVersion = true
+            });
+
+        var jobQueue = new JobQueue(this, "batch-queue", new JobQueueProps
+        {
+            JobQueueName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
+            Enabled = true,
+            ComputeEnvironments = [new OrderedComputeEnvironment
+            {
+                ComputeEnvironment = batchEnvironment
+            }]
+        });
+
+        var batchJobDefinition = new EcsJobDefinition(this, "data-loader-job-definition", new EcsJobDefinitionProps
+        {
+            JobDefinitionName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
+            Timeout = AmazonCDK.Duration.Minutes(1),
+            Container = new EcsFargateContainerDefinition(this, "data-loader-job-container-definition",
+                new EcsFargateContainerDefinitionProps
+                {
+                    AssignPublicIp = false,
+                    Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository,
+                        appSettings.Service.ApiContainer.Tag),
+                    Cpu = 0.5,
+                    Memory = AmazonCDK.Size.Gibibytes(1),
+                    Environment = new Dictionary<string, string>
+                    {
+                        { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
+                        {
+                            $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName",
+                            Constants.SolutionNameToLower
+                        },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
+                        {
+                            $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup",
+                            batchDataLoaderTaskLogGroup.LogGroupName
+                        },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
+                    }
+                })
         });
     }
 }
