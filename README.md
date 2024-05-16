@@ -51,9 +51,102 @@ The solution consists of two services:
 Having two separate processes for handling API requests and Data Loading requests is important for several reasons:
 
 - **Scalability**: The two types of services can scale independently of each other.
-- **Improved user experience**: If the pressure on one service is increasing then the remaining service is unaffected. For example, attempting to batch load a significant number of records should not affect the REST API users.
+- **User experience**: If the pressure on one service is increasing then the remaining service is unaffected. For example, attempting to batch load a significant number of records should not affect the REST API users.
 
 #### API Service
+
+The API service hosts a REST API for managing orders, calculating trade a price, and for placing trades. It also hosts a [swagger](https://swagger.io/) endpoint for easily accessing and using the API in a local and development environment.
+
+Endpoints:
+
+- `GET /api/orders/{id}`: Retrieve the order with the specified `id`.
+
+    Example return data:
+
+    ```json
+    {
+        "id": 1,
+        "symbol": "JPM",
+        "side": 0,
+        "amount": 20,
+        "price": 20
+    }
+    ```
+
+- `POST /api/orders/{id}`: Create an order with the specified `id` and payload.
+
+    Example payload that can be used to create an order:
+
+    ```json
+    {
+        "symbol": "JPM",
+        "side": 0,
+        "amount": 20,
+        "price": 20
+    }
+    ```
+
+- `PATCH /api/orders/{id}`: Modify an order with the specified `id` and payload.
+
+    Example payload that can be used to amend an order:
+
+    ```json
+    {
+        "amount": 25,
+        "price": 20
+    }
+    ```
+
+- `DELETE /api/orders/{id}`: Delete the order with the specified `id`.
+
+- `POST /api/trade`: Create a trade with the specified payload.
+
+    Example payload that can be used to create a trade:
+
+    ```json
+    {
+        "symbol": "JPM",
+        "side": 0,
+        "amount": 22
+    }
+    ```
+
+    Example return data:
+
+    ```json
+    {
+        "timestamp": "2024-05-16T10:45:21.1486242Z",
+        "successful": true,
+        "reason": null
+    }
+    ```
+
+    If a trade can't be constructed for any reason then the `successful` field is set to false and the `reason` field will contain details regarding the issue (e.g.: not enough orders to construct a trade).
+
+- `POST /api/price`: Price a trade with the specified payload.
+
+    Example payload that can be used to create a trade:
+
+    ```json
+    {
+        "symbol": "JPM",
+        "side": 0,
+        "amount": 22
+    }
+    ```
+
+    Example return data:
+
+    ```json
+    {
+        "price": 442,
+        "timestamp": "2024-05-16T10:49:31.169359Z",
+        "successful": true,
+        "reason": null
+    }
+    ```
+
+    If a trade price can't be constructed for any reason then the `successful` field is set to false and the `reason` field will contain details regarding the issue (e.g.: not enough orders to price a trade).
 
 #### Data Loader service
 
