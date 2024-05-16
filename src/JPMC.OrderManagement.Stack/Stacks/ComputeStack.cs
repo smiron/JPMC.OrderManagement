@@ -108,6 +108,11 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             EnableFargateCapacityProviders = true,
             ContainerInsights = true
         });
+        
+        ecsCluster.AddDefaultCapacityProviderStrategy([new CapacityProviderStrategy
+        {
+            CapacityProvider = "FARGATE_SPOT"
+        }]);
 
         var ecsApiTask = new FargateTaskDefinition(this, "ecs-task-api", new FargateTaskDefinitionProps
         {
@@ -188,13 +193,18 @@ internal sealed class ComputeStack : AmazonCDK.Stack
 
         var ecsService = new FargateService(this, "ecs-service", new FargateServiceProps
         {
+            ServiceName = Constants.SolutionNameId,
             Cluster = ecsCluster,
             PlatformVersion = FargatePlatformVersion.LATEST,
-            ServiceName = Constants.SolutionNameId,
             SecurityGroups = [ networkingStack.ComputeSecurityGroup ],
             VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
             TaskDefinition = ecsApiTask,
-            AssignPublicIp = false
+            AssignPublicIp = false,
+            CircuitBreaker = new DeploymentCircuitBreaker
+            {
+                Enable = true,
+                Rollback = true
+            } 
         });
 
         ecsService.AutoScaleTaskCount(new EnableScalingProps
@@ -217,7 +227,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
         });
 
-        var batchEnvironment = new FargateComputeEnvironment(this, "batch-service",
+        var batchEnvironment = new FargateComputeEnvironment(this, "batch-environment",
             new FargateComputeEnvironmentProps
             {
                 ComputeEnvironmentName = $"{Constants.SolutionNameId}-{appSettings.Environment}",
