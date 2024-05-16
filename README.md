@@ -221,20 +221,3 @@ Batch loading orders process:
 ![Table Design GSI1](./resources/DynamoDB-Design-Table-Index-GSI1.png)
 
 The DynamoDB table design has been authored using [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html) and is available to download from [here](./resources/DynamoDB-Design-NoSqlWorkbench.json).
-
-
-
-TODO:
-
-- Calculate availability
-- Consider deployment scenarios (how do you update code, ECS, Redis)
-- Consider DR strategy
-- CI/CD
-- Cost estimate
-- Deletion protection where possible
-- point-in-time recovery for the data store
-- Use a Route 53 domain to host the system
-- Consider adding AuthN and AuthZ (https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html)
-- Document what we've done ro reduce latency (ECS - eliminates lambda cold start + lambda service delay, ALB to load balance requests, single table design)
-- Enable autoscaling
-- Item lineage via DynamoDB streams in S3
