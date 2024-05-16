@@ -16,13 +16,13 @@ namespace JPMC.OrderManagement.Stack.Stacks;
 
 internal sealed class ComputeStack : AmazonCDK.Stack
 {
-    private readonly DDB.EnableScalingProps DynamoDbAutoScaling = new() 
+    private readonly DDB.EnableScalingProps _dynamoDbAutoScaling = new() 
     {
         MinCapacity = 1,
         MaxCapacity = 10
     };
 
-    private readonly DDB.UtilizationScalingProps DynamoDbUtilizationScalingProps = new()
+    private readonly DDB.UtilizationScalingProps _dynamoDbUtilizationScalingProps = new()
     {
         TargetUtilizationPercent = 80
     };
@@ -79,11 +79,11 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         };
         ddbTable.AddGlobalSecondaryIndex(ddbTableGsi1Props);
         
-        ddbTable.AutoScaleReadCapacity(DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
-        ddbTable.AutoScaleWriteCapacity(DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleReadCapacity(_dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleWriteCapacity(_dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
 
-        ddbTable.AutoScaleGlobalSecondaryIndexReadCapacity(ddbTableGsi1Props.IndexName, DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
-        ddbTable.AutoScaleGlobalSecondaryIndexWriteCapacity(ddbTableGsi1Props.IndexName, DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleGlobalSecondaryIndexReadCapacity(ddbTableGsi1Props.IndexName, _dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleGlobalSecondaryIndexWriteCapacity(ddbTableGsi1Props.IndexName, _dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
         
         var ecsApiTaskLogGroup = new LogGroup(this, "ecs-api-task-log-group", new LogGroupProps
         {
@@ -258,22 +258,15 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                 new EcsFargateContainerDefinitionProps
                 {
                     AssignPublicIp = false,
-                    Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository,
-                        appSettings.Service.ApiContainer.Tag),
-                    Cpu = 0.5,
-                    Memory = AmazonCDK.Size.Gibibytes(1),
+                    Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementDataLoaderRepository, appSettings.Service.DataLoaderContainer.Tag),
+                    Cpu = appSettings.Service.DataLoaderContainer.CPU / 1024.0,
+                    Memory = AmazonCDK.Size.Mebibytes(appSettings.Service.DataLoaderContainer.Memory),
                     Environment = new Dictionary<string, string>
                     {
                         { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
-                        {
-                            $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName",
-                            Constants.SolutionNameToLower
-                        },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
                         { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
-                        {
-                            $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup",
-                            batchDataLoaderTaskLogGroup.LogGroupName
-                        },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", batchDataLoaderTaskLogGroup.LogGroupName },
                         { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
                     }
                 })
