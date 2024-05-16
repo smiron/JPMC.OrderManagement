@@ -1,7 +1,9 @@
 # Order Management
 
+- [Getting started](#getting-started)
+  - [Software requirements](#software-requirements)
+  - [Running the solution in AWS](#running-the-solution-in-aws)
 - [Solution](#solution)
-  - [Architecture](#architecture)
   - [Design considerations](#design-considerations)
     - [DynamoDB Single-Table Design](#dynamodb-single-table-design)
     - [Amazon ECS on AWS Fargate](#amazon-ecs-on-aws-fargate)
@@ -9,17 +11,69 @@
     - [API Service](#api-service)
     - [Data Loader service](#data-loader-service)
   - [DynamoDB data store](#dynamodb-data-store)
-- [Getting started](#getting-started)
-  - [Software requirements](#software-requirements)
-  - [Deploying the solution to AWS cloud](#deploying-the-solution-to-aws-cloud)
 
 ---
 
-## Solution
-
-### Architecture
-
 ![Architecture Diagram](./resources/architecture.drawio.png)
+
+## Getting started
+
+### Software requirements
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [AWS CDK](https://aws.amazon.com/cdk/)
+- [DOTNET SDK 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
+- [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html)
+
+### Running the solution in AWS
+
+Please follow the below steps to deploy and run the solution in your AWS cloud account:
+
+1. Bootstrap the CDK framework to your AWS account.
+
+    ```bash
+    cdk bootstrap --termination-protection true
+    ```
+
+2. Deploy the CI/CD stack.
+
+    ```bash
+    cdk deploy JPMC-OrderManagement-CiCdStack
+    ```
+
+3. Authenticate to the newly create ECR repository. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
+
+    ```bash
+    aws ecr get-login-password --region [AWS-REGION] | docker login --username AWS --password-stdin [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com
+    ```
+
+4. Build the API Docker image.
+
+    ```bash
+    dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
+    ```
+
+5. Tag the new image with the ECR repository URL. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
+
+    ```bash
+    docker tag jpmc-order-management-api:latest [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
+    ```
+
+6. Push the image to ECR. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
+
+    ```bash
+    docker push [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
+    ```
+
+7. Deploy the networking and the compute stacks.
+
+    ```bash
+    cdk deploy --all
+    ```
+
+## Solution
 
 ### Design considerations
 
@@ -168,62 +222,7 @@ Batch loading orders process:
 
 The DynamoDB table design has been authored using [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html) and is available to download from [here](./resources/DynamoDB-Design-NoSqlWorkbench.json).
 
-## Getting started
 
-### Software requirements
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [AWS CLI](https://aws.amazon.com/cli/)
-- [AWS CDK](https://aws.amazon.com/cdk/)
-- [DOTNET SDK 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
-- [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html)
-
-### Deploying the solution to AWS cloud
-
-Please follow the below steps to deploy and run the solution in your AWS cloud account:
-
-1. Bootstrap the CDK framework to your AWS account.
-
-    ```bash
-    cdk bootstrap --termination-protection true
-    ```
-
-2. Deploy the CI/CD stack.
-
-    ```bash
-    cdk deploy JPMC-OrderManagement-CiCdStack
-    ```
-
-3. Authenticate to the newly create ECR repository. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
-
-    ```bash
-    aws ecr get-login-password --region [AWS-REGION] | docker login --username AWS --password-stdin [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com
-    ```
-
-4. Build the API Docker image.
-
-    ```bash
-    dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
-    ```
-
-5. Tag the new image with the ECR repository URL. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
-
-    ```bash
-    docker tag jpmc-order-management-api:latest [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
-    ```
-
-6. Push the image to ECR. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
-
-    ```bash
-    docker push [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
-    ```
-
-7. Deploy the networking and the compute stacks.
-
-    ```bash
-    cdk deploy --all
-    ```
 
 TODO:
 
