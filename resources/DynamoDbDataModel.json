@@ -1,0 +1,342 @@
+{
+  "ModelName": "JPMC.OrderManagement",
+  "ModelMetadata": {
+    "Author": "Sorin Miron",
+    "DateCreated": "May 13, 2024, 09:09 PM",
+    "DateLastModified": "May 16, 2024, 09:57 AM",
+    "Description": "",
+    "AWSService": "Amazon DynamoDB",
+    "Version": "3.0"
+  },
+  "DataModel": [
+    {
+      "TableName": "jpmc.ordermanagement",
+      "KeyAttributes": {
+        "PartitionKey": {
+          "AttributeName": "PK",
+          "AttributeType": "S"
+        },
+        "SortKey": {
+          "AttributeName": "SK",
+          "AttributeType": "S"
+        }
+      },
+      "NonKeyAttributes": [
+        {
+          "AttributeName": "EntityType",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "ID",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "Symbol",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "Side",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "Price",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "Amount",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "GSI1PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1SK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "ETag",
+          "AttributeType": "S"
+        }
+      ],
+      "TableFacets": [
+        {
+          "FacetName": "Order",
+          "KeyAttributeAlias": {
+            "PartitionKeyAlias": "PK",
+            "SortKeyAlias": "SK"
+          },
+          "TableData": [
+            {
+              "PK": {
+                "S": "ORDER#1"
+              },
+              "SK": {
+                "S": "ORDER#1"
+              },
+              "EntityType": {
+                "S": "ORDER"
+              },
+              "ID": {
+                "N": "1"
+              },
+              "Symbol": {
+                "S": "JPM"
+              },
+              "Side": {
+                "S": "Buy"
+              },
+              "Price": {
+                "N": "20"
+              },
+              "Amount": {
+                "N": "20"
+              },
+              "GSI1PK": {
+                "S": "JPM#Buy"
+              },
+              "GSI1SK": {
+                "S": "20"
+              },
+              "ETag": {
+                "S": "00d79bd1-d0f9-41d2-9a93-349cbb4388f0"
+              }
+            },
+            {
+              "PK": {
+                "S": "ORDER#2"
+              },
+              "SK": {
+                "S": "ORDER#2"
+              },
+              "EntityType": {
+                "S": "ORDER"
+              },
+              "ID": {
+                "N": "2"
+              },
+              "Symbol": {
+                "S": "GOOG"
+              },
+              "Side": {
+                "S": "Sell"
+              },
+              "Price": {
+                "N": "25"
+              },
+              "Amount": {
+                "N": "12"
+              },
+              "GSI1PK": {
+                "S": "GOOG#Sell"
+              },
+              "GSI1SK": {
+                "S": "25"
+              },
+              "ETag": {
+                "S": "75db65d9-657a-4859-a5f2-9cf05316ff06"
+              }
+            },
+            {
+              "PK": {
+                "S": "ORDER#3"
+              },
+              "SK": {
+                "S": "ORDER#3"
+              },
+              "EntityType": {
+                "S": "ORDER"
+              },
+              "ID": {
+                "N": "3"
+              },
+              "Symbol": {
+                "S": "AMZN"
+              },
+              "Side": {
+                "S": "Sell"
+              },
+              "Price": {
+                "N": "10"
+              },
+              "Amount": {
+                "N": "7"
+              },
+              "GSI1PK": {
+                "S": "AMZN#Sell"
+              },
+              "GSI1SK": {
+                "S": "10"
+              },
+              "ETag": {
+                "S": "6fb934b3-0f59-45cc-86e1-ed1babb0660f"
+              }
+            },
+            {
+              "PK": {
+                "S": "ORDER#4"
+              },
+              "SK": {
+                "S": "ORDER#4"
+              },
+              "EntityType": {
+                "S": "ORDER"
+              },
+              "ID": {
+                "N": "4"
+              },
+              "Symbol": {
+                "S": "JPM"
+              },
+              "Side": {
+                "S": "Buy"
+              },
+              "Price": {
+                "N": "21"
+              },
+              "Amount": {
+                "N": "10"
+              },
+              "GSI1PK": {
+                "S": "JPM#Buy"
+              },
+              "GSI1SK": {
+                "S": "21"
+              },
+              "ETag": {
+                "S": "3e2692d7-7f0e-43da-9371-af809a1ef00b"
+              }
+            }
+          ],
+          "NonKeyAttributes": [
+            "EntityType",
+            "ID",
+            "Symbol",
+            "Side",
+            "Price",
+            "Amount",
+            "GSI1PK",
+            "GSI1SK",
+            "ETag"
+          ],
+          "DataAccess": {
+            "MySql": {}
+          }
+        },
+        {
+          "FacetName": "Trade",
+          "KeyAttributeAlias": {
+            "PartitionKeyAlias": "PK",
+            "SortKeyAlias": "SK"
+          },
+          "TableData": [
+            {
+              "PK": {
+                "S": "TRADE#1"
+              },
+              "SK": {
+                "S": "TRADE#1"
+              },
+              "EntityType": {
+                "S": "TRADE"
+              },
+              "ID": {
+                "N": "1"
+              },
+              "Symbol": {
+                "S": "JPM"
+              },
+              "Side": {
+                "S": "Buy"
+              },
+              "Amount": {
+                "N": "22"
+              },
+              "ETag": {
+                "S": "21a5992c-c289-411a-8a82-744652eda7cc"
+              }
+            }
+          ],
+          "NonKeyAttributes": [
+            "EntityType",
+            "ID",
+            "Symbol",
+            "Side",
+            "Amount",
+            "ETag"
+          ],
+          "DataAccess": {
+            "MySql": {}
+          }
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "GSI1",
+          "KeyAttributes": {
+            "PartitionKey": {
+              "AttributeName": "GSI1PK",
+              "AttributeType": "S"
+            },
+            "SortKey": {
+              "AttributeName": "GSI1SK",
+              "AttributeType": "S"
+            }
+          },
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        }
+      ],
+      "DataAccess": {
+        "MySql": {}
+      },
+      "SampleDataFormats": {
+        "CreateTimestamp": [
+          "date",
+          "ISO 8601 date and time"
+        ],
+        "UpdateTimestamp": [
+          "date",
+          "ISO 8601 date and time"
+        ],
+        "ID": [
+          "Int"
+        ],
+        "Price": [
+          "Int"
+        ],
+        "Amount": [
+          "Int"
+        ]
+      },
+      "BillingMode": "PROVISIONED",
+      "ProvisionedCapacitySettings": {
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        },
+        "AutoScalingRead": {
+          "ScalableTargetRequest": {
+            "MinCapacity": 1,
+            "MaxCapacity": 10,
+            "ServiceRole": "AWSServiceRoleForApplicationAutoScaling_DynamoDBTable"
+          },
+          "ScalingPolicyConfiguration": {
+            "TargetValue": 70
+          }
+        },
+        "AutoScalingWrite": {
+          "ScalableTargetRequest": {
+            "MinCapacity": 1,
+            "MaxCapacity": 10,
+            "ServiceRole": "AWSServiceRoleForApplicationAutoScaling_DynamoDBTable"
+          },
+          "ScalingPolicyConfiguration": {
+            "TargetValue": 70
+          }
+        }
+      }
+    }
+  ]
+}
