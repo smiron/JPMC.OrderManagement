@@ -7,6 +7,7 @@
   - [Design considerations](#design-considerations)
     - [DynamoDB Single-Table Design](#dynamodb-single-table-design)
     - [Amazon ECS on AWS Fargate](#amazon-ecs-on-aws-fargate)
+    - [Private Connectivity](#private-connectivity)
   - [Services](#services)
     - [API Service](#api-service)
     - [Data Loader service](#data-loader-service)
@@ -96,6 +97,10 @@ More details regarding the single-table design pattern are available at [The Wha
 - **Reduced API latency**: Containers are always running and prepared to process requests. There is no service related latency or overhead.
 - **Reduced operational overhead**: There are no instances to manage. The service automatically provisions the required underlying infrastructure to run the containers.
 - **Scalability**: ECS automatically scales up and down the number of containers to satisfy the workload being placed on the service.
+
+#### Private Connectivity
+
+You may notice that the solution diagram doesn't require a NAT Gateway. The reason for this is that the solution provisions gateway and interface endpoints for all AWS services used from the private subnets. Therefore the CDK `NetworkingStack` stack provisions interface endpoints for `ECR` and `CloudWatch Logs` and gateway endpoints for `S3` and `DynamoDB`.
 
 ### Services
 
