@@ -11,6 +11,8 @@
     - [API Service](#api-service)
     - [Data Loader service](#data-loader-service)
   - [DynamoDB data store](#dynamodb-data-store)
+    - [Table Design](#table-design)
+    - [Table GSI1 Design](#table-gsi1-design)
 
 ---
 
@@ -214,9 +216,15 @@ Batch loading orders process:
     1. **Download data**: It first downloads the data locally in ephemeral storage. This is done to reduce access time to the data records and to increase reliability.
     2. **Batch Write to DynamoDB**: A batch write is initiated and the the data records are written to DynamoDB.
 
+***NOTE**: Please note that the Data Loader service and the related infrastructure is not part of the current solution version.*
+
 ### DynamoDB data store
 
+#### Table Design
+
 ![Table Design](./resources/DynamoDB-Design-Table.png)
+
+#### Table GSI1 Design
 
 ![Table Design GSI1](./resources/DynamoDB-Design-Table-Index-GSI1.png)
 
