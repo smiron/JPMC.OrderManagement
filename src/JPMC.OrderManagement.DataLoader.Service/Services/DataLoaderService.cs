@@ -21,6 +21,10 @@ internal class DataLoaderService(
     DynamoDBOperationConfig dynamoDbOperationConfig,
     ILogger<DataLoaderService> logger) : IDataLoaderService
 {
+    private const string StartingStatus = "Starting";
+    private const string CompleteStatus = "Complete";
+    private const string FailedStatus = "Failed";
+
     public async Task ExecuteAsync()
     {
         await DownloadData();
@@ -30,6 +34,9 @@ internal class DataLoaderService(
 
     private async Task ImportData()
     {
+        logger.LogInformation($"Data import to DynamoDB from bucket {{BucketName}} and object key {{ObjectKey}} - {StartingStatus}.",
+            jobOptions.Value.BucketName, jobOptions.Value.ObjectKey);
+
         using var writer = new StreamReader(serviceOptions.Value.DownloadToFile);
         using var csvReader = new CsvReader(writer, CultureInfo.InvariantCulture);
 
@@ -38,6 +45,7 @@ internal class DataLoaderService(
         var batchWrite = dynamoDbContext.CreateBatchWrite<Order>(dynamoDbOperationConfig);
 
         // TODO: there might be a significant amount of data in the CSV file. We need to limit the maximum number of records we add to a batch
+        int orderLineCount = 0;
         await foreach (var orderLine in orderLines)
         {
             var order = new Order(orderLine.OrderId)
@@ -49,22 +57,28 @@ internal class DataLoaderService(
             };
 
             batchWrite.AddPutItem(order);
+            orderLineCount++;
         }
 
         try
         {
+            logger.LogInformation($"Data import to DynamoDB from bucket {{BucketName}} and object key {{ObjectKey}} - {StartingStatus} to write {{OrderLineCount}} items.",
+                jobOptions.Value.BucketName, jobOptions.Value.ObjectKey, orderLineCount);
             await batchWrite.ExecuteAsync();
-            logger.LogInformation("Data load complete.");
+            logger.LogInformation($"Data import to DynamoDB from bucket {{BucketName}} and object key {{ObjectKey}} - {CompleteStatus}.",
+                jobOptions.Value.BucketName, jobOptions.Value.ObjectKey);
         }
         catch (Exception ex)
         {
-            logger.LogError("Data load encountered an error: {ErrorMessage}. Exception: {Exception}", ex.Message, ex);
+            logger.LogInformation($"Data import to DynamoDB from bucket {{BucketName}} and object key {{ObjectKey}} - {FailedStatus}. Error message: {{ErrorMessage}}. Exception: {{Exception}}",
+                jobOptions.Value.BucketName, jobOptions.Value.ObjectKey, ex.Message, ex);
+            throw;
         }
     }
 
     private async Task DownloadData()
     {
-        logger.LogInformation("Loading data from bucket {BucketName} and object key {ObjectKey}",
+        logger.LogInformation($"Data download from bucket {{BucketName}} and object key {{ObjectKey}} - {StartingStatus}.",
             jobOptions.Value.BucketName, jobOptions.Value.ObjectKey);
 
         using var getObjectResponse = await amazonS3Client.GetObjectAsync(
@@ -80,7 +94,8 @@ internal class DataLoaderService(
 
         await responseStream.CopyToAsync(fileStream);
 
-        logger.LogInformation("The data has been downloaded locally for reliable ingestion.");
+        logger.LogInformation($"Data download from bucket {{BucketName}} and object key {{ObjectKey}} - {CompleteStatus}.",
+            jobOptions.Value.BucketName, jobOptions.Value.ObjectKey);
     }
 }
 

@@ -4,7 +4,7 @@ internal class ServiceOptions
 {
     public string DownloadToFile { get; set; } = "./data.csv";
 
-    public string EnvironmentName { get; set; } = null!;
+    public string Environment { get; set; } = null!;
 
     public string DynamoDbTableName { get; set; } = null!;
 }

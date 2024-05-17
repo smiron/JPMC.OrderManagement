@@ -1,6 +1,7 @@
 ﻿using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.S3;
+using AWS.Logger;
 using JPMC.OrderManagement.DataLoader.Service.Options;
 using JPMC.OrderManagement.DataLoader.Service.Services;
 using JPMC.OrderManagement.DataLoader.Service.Services.Interfaces;
@@ -29,7 +30,7 @@ internal class Startup(IConfiguration configuration)
                 var serviceOptions = provider.GetRequiredService<IOptions<ServiceOptions>>().Value;
                 return new DynamoDBOperationConfig
                 {
-                    TableNamePrefix = $"{serviceOptions.EnvironmentName}.",
+                    TableNamePrefix = $"{serviceOptions.Environment}.",
                     OverrideTableName = serviceOptions.DynamoDbTableName,
                     SkipVersionCheck = true
                 };
@@ -43,7 +44,24 @@ internal class Startup(IConfiguration configuration)
                     dynamoDbClient,
                     dynamoDbOperationConfig);
             })
-            .AddLogging(loggingBuilder => loggingBuilder.AddConsole());
+            .AddSingleton<IFileSystem, FileSystemService>()
+            .AddLogging(loggingBuilder =>
+            {
+                var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
+
+                loggingBuilder.AddConsole();
+
+                if (cloudWatchLogsEnable)
+                {
+                    loggingBuilder.AddAWSProvider(new AWSLoggerConfig
+                    {
+                        DisableLogGroupCreation = true,
+                        LibraryLogErrors = false,
+                        LogGroup = configuration.GetValue<string>("CloudWatchLogs:LogGroup"),
+                        LogStreamNameSuffix = configuration.GetValue<string>($"{DataLoaderServiceOptionsConfigPath}:{nameof(ServiceOptions.Environment)}") ?? "NA"
+                    });
+                }
+            });
 
         services
             .AddOptions<DataLoaderJobOptions>()
