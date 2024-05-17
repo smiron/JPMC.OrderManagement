@@ -126,7 +126,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             }
         });
 
-        ecsApiTask.TaskRole.AttachInlinePolicy(new Policy(this, "ecs-task-role-ddb", new PolicyProps
+        var dynamoDbIamPolicy = new Policy(this, "dynamodb-iam-policy", new PolicyProps
         {
             PolicyName = $"DynamoDB-{ddbTable.TableName}",
             Statements =
@@ -135,7 +135,11 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                 {
                     Sid = "AllowActions",
                     Effect = Effect.ALLOW,
-                    Actions = ["dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:DescribeTable"],
+                    Actions =
+                    [
+                        "dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:PutItem",
+                        "dynamodb:Query", "dynamodb:DescribeTable", "dynamodb:BatchWriteItem"
+                    ],
                     Resources = [ddbTable.TableArn, $"{ddbTable.TableArn}/index/{ddbTableGsi1Props.IndexName}"]
                 }),
                 new PolicyStatement(new PolicyStatementProps
@@ -146,22 +150,28 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                     Resources = [ddbTable.TableArn, $"{ddbTable.TableArn}/index/{ddbTableGsi1Props.IndexName}"]
                 })
             ]
-        }));
+        });
 
-        ecsApiTask.TaskRole.AttachInlinePolicy(new Policy(this, "ecs-task-role-cloudwatch-logs", new PolicyProps
+        var cloudWatchLogsIamPolicy = new Policy(this, "cloudwatch-logs-iam-policy", new PolicyProps
         {
-            PolicyName = $"CloudWatchLogs-{Constants.Owner}{Constants.System}API",
+            PolicyName = "CloudWatchLogs",
             Statements =
             [
                 new PolicyStatement(new PolicyStatementProps
                 {
                     Sid = "AllowActions",
                     Effect = Effect.ALLOW,
-                    Actions = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups"],
+                    Actions =
+                    [
+                        "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups"
+                    ],
                     Resources = [$"arn:{Partition}:logs:{Region}:{Account}:*"]
                 })
             ]
-        }));
+        });
+
+        ecsApiTask.TaskRole.AttachInlinePolicy(dynamoDbIamPolicy);
+        ecsApiTask.TaskRole.AttachInlinePolicy(cloudWatchLogsIamPolicy);
 
         ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
@@ -292,5 +302,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         batchJobDefinition.Container.AddVolume(ecsDataLoaderVolume);
 
         s3Bucket.GrantRead(batchJobDefinition.Container.JobRole!);
+        batchJobDefinition.Container.JobRole!.AttachInlinePolicy(dynamoDbIamPolicy);
+        batchJobDefinition.Container.JobRole!.AttachInlinePolicy(cloudWatchLogsIamPolicy);
     }
 }
