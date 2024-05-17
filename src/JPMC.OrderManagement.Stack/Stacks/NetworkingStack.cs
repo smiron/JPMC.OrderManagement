@@ -82,6 +82,15 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             Open = true
         });
 
+        Vpc.AddInterfaceEndpoint("ec2-endpoint", new InterfaceVpcEndpointOptions
+        {
+            Service = InterfaceVpcEndpointAwsService.EC2,
+            PrivateDnsEnabled = true,
+            Subnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
+            SecurityGroups = [ComputeSecurityGroup],
+            Open = true
+        });
+
         Vpc.AddGatewayEndpoint("s3-gateway-endpoint", new GatewayVpcEndpointOptions
         {
             Service = GatewayVpcEndpointAwsService.S3,

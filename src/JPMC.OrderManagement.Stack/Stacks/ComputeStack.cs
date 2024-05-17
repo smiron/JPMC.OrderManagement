@@ -250,6 +250,13 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             }]
         });
 
+        var ecsDataLoaderVolume = EcsVolume.Host(new HostVolumeOptions
+        {
+            Name = "data",
+            ContainerPath = "/app/data",
+            Readonly = false
+        });
+
         var batchJobDefinition = new EcsJobDefinition(this, "data-loader-job-definition", new EcsJobDefinitionProps
         {
             JobDefinitionName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
@@ -263,13 +270,27 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                     Memory = AmazonCDK.Size.Mebibytes(appSettings.Service.DataLoaderContainer.Memory),
                     Environment = new Dictionary<string, string>
                     {
-                        { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__Environment", appSettings.Environment },
                         { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DownloadToFile", $"{ecsDataLoaderVolume.ContainerPath}/data.csv" },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__Job__BucketName", s3Bucket.BucketName },
                         { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
-                        { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", batchDataLoaderTaskLogGroup.LogGroupName },
-                        { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
-                    }
-                })
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", batchDataLoaderTaskLogGroup.LogGroupName }
+                    },
+                    JobRole = new Role(this, "data-loader-job-role", new RoleProps
+                    {
+                        RoleName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
+                        AssumedBy = new ServicePrincipal("ecs-tasks.amazonaws.com", new ServicePrincipalOpts
+                        {
+                            Region = Region
+                        })
+                    }),
+                    ReadonlyRootFilesystem = true
+                }),
         });
+        
+        batchJobDefinition.Container.AddVolume(ecsDataLoaderVolume);
+
+        s3Bucket.GrantRead(batchJobDefinition.Container.JobRole!);
     }
 }
