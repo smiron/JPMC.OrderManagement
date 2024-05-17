@@ -37,8 +37,8 @@ internal class DataLoaderService(
         logger.LogInformation($"Data import to DynamoDB from bucket {{BucketName}} and object key {{ObjectKey}} - {StartingStatus}.",
             jobOptions.Value.BucketName, jobOptions.Value.ObjectKey);
 
-        using var writer = new StreamReader(serviceOptions.Value.DownloadToFile);
-        using var csvReader = new CsvReader(writer, CultureInfo.InvariantCulture);
+        using var reader = new StreamReader(serviceOptions.Value.DownloadToFile);
+        using var csvReader = new CsvReader(reader, CultureInfo.InvariantCulture);
 
         var orderLines = csvReader.GetRecordsAsync<OrderLine>();
 
