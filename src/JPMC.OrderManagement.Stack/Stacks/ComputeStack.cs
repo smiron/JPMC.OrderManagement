@@ -184,6 +184,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             {
                 { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}Logging__LogLevel__Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware", "Warning" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", ecsApiTaskLogGroup.LogGroupName },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
@@ -214,13 +215,18 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             {
                 Enable = true,
                 Rollback = true
-            } 
+            },
+            CapacityProviderStrategies = [new CapacityProviderStrategy
+            {
+                CapacityProvider = "FARGATE_SPOT",
+                Weight = 100
+            }]
         });
 
         ecsService.AutoScaleTaskCount(new EnableScalingProps
         {
-            MinCapacity = 1,
-            MaxCapacity = 5
+            MinCapacity = appSettings.Service.ApiContainer.MinInstanceCount,
+            MaxCapacity = appSettings.Service.ApiContainer.MaxInstanceCount
         });
 
         ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);

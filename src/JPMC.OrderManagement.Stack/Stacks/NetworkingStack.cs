@@ -103,14 +103,10 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             Subnets = [new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED }]
         });
 
-        ComputeSecurityGroup.AddIngressRule(LoadBalancerSecurityGroup, Port.Tcp(ApplicationPort),
+        ComputeSecurityGroup.AddIngressRule(
+            LoadBalancerSecurityGroup,
+            Port.Tcp(ApplicationPort),
             $"Allow {ApplicationPort} from Load Balancer");
-
-        if (!string.IsNullOrEmpty(appSettings.LoadBalancer.RestrictIngressToCidr))
-        {
-            LoadBalancerSecurityGroup.AddIngressRule(Peer.Ipv4(appSettings.LoadBalancer.RestrictIngressToCidr),
-                Port.Tcp(InternetPort), $"Allow {InternetPort} from the allowed LB inbound CIDR");
-        }
 
         var alb = new ApplicationLoadBalancer(this, "load-balancer", new ApplicationLoadBalancerProps
         {
@@ -118,7 +114,8 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             LoadBalancerName = Constants.Owner,
             SecurityGroup = LoadBalancerSecurityGroup,
             InternetFacing = true,
-            IpAddressType = IpAddressType.IPV4
+            IpAddressType = IpAddressType.IPV4,
+            DeletionProtection = true
         });
 
         AlbTargetGroup = new ApplicationTargetGroup(this, "ecs-target-group", new ApplicationTargetGroupProps
@@ -142,13 +139,19 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             }
         });
 
-        alb.AddListener("listener-http", new ApplicationListenerProps
+        var loadBalancerListener = alb.AddListener("listener-http", new ApplicationListenerProps
         {
             Protocol = ApplicationProtocol.HTTP,
             Port = InternetPort,
             DefaultAction = ListenerAction.Forward([AlbTargetGroup]),
-            Open = string.IsNullOrEmpty(appSettings.LoadBalancer.RestrictIngressToCidr)
+            Open = false,
         });
+
+        foreach (var restrictIngressToCidr in appSettings.LoadBalancer.RestrictIngressToCidrs)
+        {
+            loadBalancerListener.Connections.AllowDefaultPortFrom(Peer.Ipv4(restrictIngressToCidr),
+                $"Allow port {InternetPort} from CIDR {restrictIngressToCidr}");
+        }
     }
 
     public Vpc Vpc { get; private set; }
