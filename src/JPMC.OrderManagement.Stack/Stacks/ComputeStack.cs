@@ -184,7 +184,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             {
                 { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
-                { $"{Constants.ComputeEnvironmentVariablesPrefix}Logging__LogLevel__Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware", "Warning" },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__HttpLogging", "false" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", ecsApiTaskLogGroup.LogGroupName },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
@@ -302,7 +302,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                         })
                     }),
                     ReadonlyRootFilesystem = true
-                }),
+                })
         });
         
         batchJobDefinition.Container.AddVolume(ecsDataLoaderVolume);

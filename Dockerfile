@@ -22,7 +22,15 @@ ARG mainProject
 WORKDIR /app/src/$mainProject
 RUN dotnet publish --no-restore -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/runtime:${netVersion}
+FROM mcr.microsoft.com/dotnet/runtime:${netVersion} AS service
+ARG mainProject
+RUN apt update && apt upgrade
+ENV mainProject=$mainProject
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT dotnet $mainProject.dll
+
+FROM mcr.microsoft.com/dotnet/aspnet:${netVersion} AS restapi
 ARG mainProject
 RUN apt update && apt upgrade
 ENV mainProject=$mainProject
