@@ -55,6 +55,15 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
     -r cdk.outputs.json
     ```
 
+### Batch upload order 
+
+1. Navigate to the swagger page and use the `/api/orders/batch-load` functionality to generate a presigned Url.
+2. Use the generated presigned Url to upload data. The system will process the data async.
+
+    ```bash
+    curl -X PUT -T ./data/sample-data.csv  <presigned-url>
+    ```
+
 ## Solution
 
 ### Design considerations

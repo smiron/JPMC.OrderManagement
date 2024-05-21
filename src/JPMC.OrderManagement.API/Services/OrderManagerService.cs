@@ -146,16 +146,15 @@ internal class OrderManagerService(
     public async Task<OrderBatchLoad> BatchLoad()
     {
         var creationTimestamp = DateTime.UtcNow;
-        var expirationTimestamp = creationTimestamp.AddDays(1);
+        var expirationTimestamp = creationTimestamp.AddHours(1);
 
         var preSignedUrl = await s3Client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
         {
             BucketName = serviceOptions.Value.BatchLoadingS3Bucket,
             Expires = expirationTimestamp,
             Key = $"batch-load/{creationTimestamp:yyyyMMddHHmmss}-{Guid.NewGuid():D}.csv",
-            ContentType = "text/csv",
-            Headers = { ContentType = "text/csv" },
-            Protocol = Protocol.HTTPS
+            Protocol = Protocol.HTTPS,
+            Verb = HttpVerb.PUT
         });
 
         return new OrderBatchLoad
