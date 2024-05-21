@@ -30,6 +30,7 @@
 - [DOTNET SDK 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
 - [NoSQL Workbench for DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.html)
+- [jq](https://jqlang.github.io/jq/)
 
 ### Running the solution in AWS
 
