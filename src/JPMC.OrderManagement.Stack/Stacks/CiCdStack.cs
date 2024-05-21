@@ -1,7 +1,9 @@
 using Constructs;
 
+using Amazon.CDK.AWS.Ecr.Assets;
+
 using AmazonCDK = Amazon.CDK;
-using Amazon.CDK.AWS.ECR;
+
 using JPMC.OrderManagement.Common;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
@@ -14,24 +16,36 @@ public class CiCdStack : AmazonCDK.Stack
             $"{Constants.Owner}-{Constants.System}-{nameof(CiCdStack)}",
             stackProps)
     {
-        JpmcOrderManagementApiRepository = new Repository(this, "ecr", new RepositoryProps
+        ApiDockerImageAsset = new DockerImageAsset(this, "api", new DockerImageAssetProps
         {
-            RepositoryName = $"{Constants.SolutionNameId}-api",
-            ImageScanOnPush = true,
-            EmptyOnDelete = true,
-            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
+            Directory = ".",
+            Target = "restapi",
+            File = "Dockerfile",
+            BuildArgs = new Dictionary<string, string>
+            {
+                { "mainProject", "JPMC.OrderManagement.API" }
+            },
+            AssetName = "jpmc-order-management-api",
+            IgnoreMode = AmazonCDK.IgnoreMode.DOCKER,
+            Platform = Platform_.LINUX_AMD64
         });
 
-        JpmcOrderManagementDataLoaderRepository = new Repository(this, "ecr-data-loader", new RepositoryProps
+        DataLoaderDockerImageAsset = new DockerImageAsset(this, "data-loader", new DockerImageAssetProps
         {
-            RepositoryName = $"{Constants.SolutionNameId}-data-loader",
-            ImageScanOnPush = true,
-            EmptyOnDelete = true,
-            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
+            Directory = ".",
+            Target = "service",
+            File = "Dockerfile",
+            BuildArgs = new Dictionary<string, string>
+            {
+                { "mainProject", "JPMC.OrderManagement.DataLoader.Service" }
+            },
+            AssetName = "jpmc-order-management-data-loader",
+            IgnoreMode = AmazonCDK.IgnoreMode.DOCKER,
+            Platform = Platform_.LINUX_AMD64
         });
     }
-
-    public Repository JpmcOrderManagementApiRepository { get; private set; }
     
-    public Repository JpmcOrderManagementDataLoaderRepository { get; private set; }
+    public DockerImageAsset ApiDockerImageAsset { get; private set; }
+    
+    public DockerImageAsset DataLoaderDockerImageAsset { get; private set; }
 }

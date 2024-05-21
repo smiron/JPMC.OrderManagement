@@ -182,7 +182,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
             ContainerName = "api",
-            Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository, appSettings.Service.ApiContainer.Tag),
+            Image = ContainerImage.FromDockerImageAsset(ciCdStack.ApiDockerImageAsset),
             MemoryLimitMiB = appSettings.Service.ApiContainer.Memory,
             Cpu = appSettings.Service.ApiContainer.CPU,
             ReadonlyRootFilesystem = true,
@@ -234,7 +234,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             MinCapacity = appSettings.Service.ApiContainer.MinInstanceCount,
             MaxCapacity = appSettings.Service.ApiContainer.MaxInstanceCount
         });
-
+        
         ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);
 
         // Blob import related infrastructure
@@ -292,7 +292,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                 new EcsFargateContainerDefinitionProps
                 {
                     AssignPublicIp = false,
-                    Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementDataLoaderRepository, appSettings.Service.DataLoaderContainer.Tag),
+                    Image = ContainerImage.FromDockerImageAsset(ciCdStack.DataLoaderDockerImageAsset),
                     Cpu = appSettings.Service.DataLoaderContainer.CPU / 1024.0,
                     Memory = AmazonCDK.Size.Mebibytes(appSettings.Service.DataLoaderContainer.Memory),
                     Environment = new Dictionary<string, string>

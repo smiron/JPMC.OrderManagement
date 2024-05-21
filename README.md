@@ -38,43 +38,13 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
 1. Bootstrap the CDK framework to your AWS account.
 
     ```bash
-    cdk bootstrap --termination-protection true
+    cdk bootstrap --termination-protection=true
     ```
 
-2. Deploy the CI/CD stack.
+2. Deploy solution.
 
     ```bash
-    cdk deploy JPMC-OrderManagement-CiCdStack
-    ```
-
-3. Authenticate to the newly create ECR repository. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
-
-    ```bash
-    aws ecr get-login-password --region [AWS-REGION] | docker login --username AWS --password-stdin [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com
-    ```
-
-4. Build the API Docker image.
-
-    ```bash
-    dotnet publish ./src/JPMC.OrderManagement.API/ --os linux --arch x64 /t:PublishContainer
-    ```
-
-5. Tag the new image with the ECR repository URL. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
-
-    ```bash
-    docker tag jpmc-order-management-api:latest [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
-    ```
-
-6. Push the image to ECR. Make sure to replace the placeholder for `AWS-REGION` and `AWS-ACCOUNT`.
-
-    ```bash
-    docker push [AWS-ACCOUNT].dkr.ecr.[AWS-REGION].amazonaws.com/jpmc-order-management-api:latest
-    ```
-
-7. Deploy the networking and the compute stacks.
-
-    ```bash
-    cdk deploy --all
+    cdk deploy --all --require-approval=never
     ```
 
 ## Solution
