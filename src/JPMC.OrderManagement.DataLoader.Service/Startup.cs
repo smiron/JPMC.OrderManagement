@@ -53,12 +53,16 @@ internal class Startup(IConfiguration configuration)
 
                 if (cloudWatchLogsEnable)
                 {
+                    var environment = configuration.GetValue<string>($"{DataLoaderServiceOptionsConfigPath}:{nameof(ServiceOptions.Environment)}") ?? "NA";
+                    var jobId = Environment.GetEnvironmentVariable("AWS_BATCH_JOB_ID") ?? "NA";
+                    var attemptNumber = Environment.GetEnvironmentVariable("AWS_BATCH_JOB_ATTEMPT") ?? "NA";
+
                     loggingBuilder.AddAWSProvider(new AWSLoggerConfig
                     {
                         DisableLogGroupCreation = true,
                         LibraryLogErrors = false,
                         LogGroup = configuration.GetValue<string>("CloudWatchLogs:LogGroup"),
-                        LogStreamNameSuffix = configuration.GetValue<string>($"{DataLoaderServiceOptionsConfigPath}:{nameof(ServiceOptions.Environment)}") ?? "NA"
+                        LogStreamNameSuffix = $"{jobId} - {attemptNumber} - {environment}"
                     });
                 }
             });

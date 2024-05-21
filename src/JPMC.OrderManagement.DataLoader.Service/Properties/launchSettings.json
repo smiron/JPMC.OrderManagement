@@ -2,6 +2,7 @@
   "profiles": {
     "import-sample-data": {
       "commandName": "Project",
+      "commandLineArgs": "--Service:Job:ObjectKey sample-data-10.csv",
       "environmentVariables": {
         "AWS_REGION": "eu-west-2"
       }

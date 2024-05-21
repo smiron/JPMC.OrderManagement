@@ -8,6 +8,7 @@ var services = new ServiceCollection();
 var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
     .AddEnvironmentVariables(Constants.ComputeEnvironmentVariablesPrefix)
+    .AddCommandLine(args)
     .Build();
 
 var startup = new Startup(configuration);
