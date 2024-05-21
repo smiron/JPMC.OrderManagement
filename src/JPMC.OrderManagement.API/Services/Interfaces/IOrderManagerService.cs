@@ -17,7 +17,18 @@ internal interface IOrderManagerService
 
     Task RemoveOrder(int orderId);
 
+    Task<OrderBatchLoad> BatchLoad();
+
     Task<int> CalculatePrice(string symbol, Side side, int amount);
 
     Task PlaceTrade(string symbol, Side side, int amount);
+}
+
+internal class OrderBatchLoad
+{
+    public string PreSignedUrl { get; set; } = null!;
+
+    public DateTime CreationTimestampUtc { get; set; }
+
+    public DateTime ExpirationTimestampUtc { get; set; }
 }

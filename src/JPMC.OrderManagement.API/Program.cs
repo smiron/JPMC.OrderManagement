@@ -1,20 +1,24 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.S3;
 using Amazon.XRay.Recorder.Core;
 using Amazon.XRay.Recorder.Handlers.AwsSdk;
 using AWS.Logger;
 using JPMC.OrderManagement.API.Controllers;
 using JPMC.OrderManagement.API.Controllers.Interfaces;
+using JPMC.OrderManagement.API.Options;
 using JPMC.OrderManagement.API.Services;
 using JPMC.OrderManagement.API.Services.Interfaces;
 using JPMC.OrderManagement.Common;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Options;
 using ApiModels = JPMC.OrderManagement.API.ApiModels;
 
 var swaggerDocumentTitle = $"{Constants.System}API";
 var swaggerDocumentVersion = "v1";
+
+const string serviceOptionsConfigPath = "Service";
 
 var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", false, false)
@@ -25,8 +29,8 @@ var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT
 var xrayEnable = configuration.GetValue<bool>("XRay:Enable");
 var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
 var cloudWatchLogGroup = configuration.GetValue<string>("CloudWatchLogs:LogGroup");
-var dynamoDbTableName = configuration.GetValue<string>("Service:DynamoDbTableName");
-var httpLogging = configuration.GetValue<bool>("Service:HttpLogging");
+
+var httpLogging = configuration.GetValue<bool>($"{serviceOptionsConfigPath}:{nameof(ServiceOptions.HttpLogging)}");
 
 var awsOptions = configuration.GetAWSOptions();
 
@@ -39,14 +43,17 @@ if (xrayEnable)
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddAWSService<IAmazonDynamoDB>()
+    .AddAWSService<IAmazonS3>()
     .AddDefaultAWSOptions(awsOptions)
     .AddSingleton(provider =>
     {
         var webHostEnvironment = provider.GetRequiredService<IWebHostEnvironment>();
+        var serviceOptions = provider.GetRequiredService<IOptions<ServiceOptions>>();
+
         return new DynamoDBOperationConfig
         {
             TableNamePrefix = $"{webHostEnvironment.EnvironmentName}.",
-            OverrideTableName = dynamoDbTableName,
+            OverrideTableName = serviceOptions.Value.DynamoDbTableName,
             SkipVersionCheck = true
         };
     })
@@ -94,6 +101,8 @@ builder.Services
                                 | HttpLoggingFields.RequestQuery;
     })
     .AddHealthChecks();
+
+builder.Services.AddOptions<ServiceOptions>().BindConfiguration(serviceOptionsConfigPath);
 
 var app = builder.Build();
 
@@ -143,6 +152,11 @@ app.MapDelete(
     "/orders/{id:int}",
     async (int id, 
         [FromServices] IOrderManagerController orderManager) => await orderManager.RemoveOrder(id));
+
+// Add orders
+app.MapPost(
+    "/orders/batch-load",
+    async ([FromServices] IOrderManagerController orderManager) => await orderManager.BatchLoad());
 
 // Trade placement
 app.MapPost("/trade",
