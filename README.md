@@ -44,7 +44,13 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
 2. Deploy solution.
 
     ```bash
-    cdk deploy --all --require-approval=never
+    cdk deploy --all --require-approval=never --outputs-file cdk.outputs.json
+    ```
+
+3. Obtain the swagger endpoint URL.
+
+    ```bash
+    jq '.["JPMC-OrderManagement-NetworkingStack"]["ApplicationSwaggerEndpointHttpUrl"]' -r cdk.outputs.json
     ```
 
 ## Solution

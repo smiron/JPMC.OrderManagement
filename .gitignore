@@ -6,4 +6,5 @@ tests/**/obj
 **/*.csproj.user
 **/*.DotSettings.user
 cdk.out
+cdk.outputs.json
 .idea/

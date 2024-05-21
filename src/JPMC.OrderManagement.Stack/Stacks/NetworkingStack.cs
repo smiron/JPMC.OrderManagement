@@ -13,6 +13,8 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
     public const int InternetPort = 80;
     public const int ApplicationPort = 8080;
 
+    private readonly ApplicationProtocol ApplicationProtocol = ApplicationProtocol.HTTP;
+
     internal NetworkingStack(Construct scope, AppSettings appSettings, AmazonCDK.IStackProps? stackProps = null)
         : base(scope,
             $"{Constants.Owner}-{Constants.System}-{nameof(NetworkingStack)}",
@@ -123,7 +125,7 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             TargetGroupName = $"ecs-{Constants.Owner}-{Constants.System}",
             Vpc = Vpc,
             Port = ApplicationPort,
-            Protocol = ApplicationProtocol.HTTP,
+            Protocol = ApplicationProtocol,
             TargetType = TargetType.IP,
             ProtocolVersion = ApplicationProtocolVersion.HTTP1,
             HealthCheck = new HealthCheck
@@ -152,6 +154,23 @@ internal sealed class NetworkingStack : AmazonCDK.Stack
             loadBalancerListener.Connections.AllowDefaultPortFrom(Peer.Ipv4(restrictIngressToCidr),
                 $"Allow port {InternetPort} from CIDR {restrictIngressToCidr}");
         }
+
+        var albApiEndpointUrlOutput = new AmazonCDK.CfnOutput(this, "application-api-endpoint-http-url", new AmazonCDK.CfnOutputProps
+        {
+            ExportName = "Application-API-Endpoint-HTTP-URL",
+            Key = "ApplicationApiEndpointHttpUrl",
+            Description = "The application HTTP API endpoint",
+            Value = $"{ApplicationProtocol}://{alb.LoadBalancerDnsName}/api"
+        });
+
+        var albSwaggerEndpointUrlOutput = new AmazonCDK.CfnOutput(this, "application-swagger-endpoint-http-url",
+            new AmazonCDK.CfnOutputProps
+            {
+                ExportName = "Application-Swagger-Endpoint-HTTP-URL",
+                Key = "ApplicationSwaggerEndpointHttpUrl",
+                Description = "The application swagger API endpoint",
+                Value = $"{ApplicationProtocol}://{alb.LoadBalancerDnsName}/api/swagger"
+            });
     }
 
     public Vpc Vpc { get; private set; }
