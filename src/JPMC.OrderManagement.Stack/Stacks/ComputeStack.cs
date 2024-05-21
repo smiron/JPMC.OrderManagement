@@ -5,24 +5,30 @@ using Constructs;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.Events;
+using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
 using JPMC.OrderManagement.Common;
+using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.SQS;
+
 using AmazonCDK = Amazon.CDK;
 using DDB = Amazon.CDK.AWS.DynamoDB;
-using Amazon.CDK.AWS.S3;
+using EventBus = Amazon.CDK.AWS.Events.EventBus;
+using EventBusProps = Amazon.CDK.AWS.Events.EventBusProps;
 using LogGroupProps = Amazon.CDK.AWS.Logs.LogGroupProps;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 
 internal sealed class ComputeStack : AmazonCDK.Stack
 {
-    private readonly DDB.EnableScalingProps DynamoDbAutoScaling = new() 
+    private readonly DDB.EnableScalingProps _dynamoDbAutoScaling = new() 
     {
         MinCapacity = 1,
         MaxCapacity = 10
     };
 
-    private readonly DDB.UtilizationScalingProps DynamoDbUtilizationScalingProps = new()
+    private readonly DDB.UtilizationScalingProps _dynamoDbUtilizationScalingProps = new()
     {
         TargetUtilizationPercent = 80
     };
@@ -79,11 +85,11 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         };
         ddbTable.AddGlobalSecondaryIndex(ddbTableGsi1Props);
         
-        ddbTable.AutoScaleReadCapacity(DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
-        ddbTable.AutoScaleWriteCapacity(DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleReadCapacity(_dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleWriteCapacity(_dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
 
-        ddbTable.AutoScaleGlobalSecondaryIndexReadCapacity(ddbTableGsi1Props.IndexName, DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
-        ddbTable.AutoScaleGlobalSecondaryIndexWriteCapacity(ddbTableGsi1Props.IndexName, DynamoDbAutoScaling).ScaleOnUtilization(DynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleGlobalSecondaryIndexReadCapacity(ddbTableGsi1Props.IndexName, _dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
+        ddbTable.AutoScaleGlobalSecondaryIndexWriteCapacity(ddbTableGsi1Props.IndexName, _dynamoDbAutoScaling).ScaleOnUtilization(_dynamoDbUtilizationScalingProps);
         
         var ecsApiTaskLogGroup = new LogGroup(this, "ecs-api-task-log-group", new LogGroupProps
         {
@@ -126,7 +132,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             }
         });
 
-        ecsApiTask.TaskRole.AttachInlinePolicy(new Policy(this, "ecs-task-role-ddb", new PolicyProps
+        var dynamoDbIamPolicy = new Policy(this, "dynamodb-iam-policy", new PolicyProps
         {
             PolicyName = $"DynamoDB-{ddbTable.TableName}",
             Statements =
@@ -135,7 +141,11 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                 {
                     Sid = "AllowActions",
                     Effect = Effect.ALLOW,
-                    Actions = ["dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:DescribeTable"],
+                    Actions =
+                    [
+                        "dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem", "dynamodb:PutItem",
+                        "dynamodb:Query", "dynamodb:DescribeTable", "dynamodb:BatchWriteItem"
+                    ],
                     Resources = [ddbTable.TableArn, $"{ddbTable.TableArn}/index/{ddbTableGsi1Props.IndexName}"]
                 }),
                 new PolicyStatement(new PolicyStatementProps
@@ -146,22 +156,28 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                     Resources = [ddbTable.TableArn, $"{ddbTable.TableArn}/index/{ddbTableGsi1Props.IndexName}"]
                 })
             ]
-        }));
+        });
 
-        ecsApiTask.TaskRole.AttachInlinePolicy(new Policy(this, "ecs-task-role-cloudwatch-logs", new PolicyProps
+        var cloudWatchLogsIamPolicy = new Policy(this, "cloudwatch-logs-iam-policy", new PolicyProps
         {
-            PolicyName = $"CloudWatchLogs-{Constants.Owner}{Constants.System}API",
+            PolicyName = "CloudWatchLogs",
             Statements =
             [
                 new PolicyStatement(new PolicyStatementProps
                 {
                     Sid = "AllowActions",
                     Effect = Effect.ALLOW,
-                    Actions = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups"],
+                    Actions =
+                    [
+                        "logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups"
+                    ],
                     Resources = [$"arn:{Partition}:logs:{Region}:{Account}:*"]
                 })
             ]
-        }));
+        });
+
+        ecsApiTask.TaskRole.AttachInlinePolicy(dynamoDbIamPolicy);
+        ecsApiTask.TaskRole.AttachInlinePolicy(cloudWatchLogsIamPolicy);
 
         ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
@@ -174,6 +190,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             {
                 { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__HttpLogging", "false" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", ecsApiTaskLogGroup.LogGroupName },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
@@ -204,13 +221,18 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             {
                 Enable = true,
                 Rollback = true
-            } 
+            },
+            CapacityProviderStrategies = [new CapacityProviderStrategy
+            {
+                CapacityProvider = "FARGATE_SPOT",
+                Weight = 100
+            }]
         });
 
         ecsService.AutoScaleTaskCount(new EnableScalingProps
         {
-            MinCapacity = 1,
-            MaxCapacity = 5
+            MinCapacity = appSettings.Service.ApiContainer.MinInstanceCount,
+            MaxCapacity = appSettings.Service.ApiContainer.MaxInstanceCount
         });
 
         ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);
@@ -250,33 +272,142 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             }]
         });
 
+        var ecsDataLoaderVolume = EcsVolume.Host(new HostVolumeOptions
+        {
+            Name = "data",
+            ContainerPath = "/app/data",
+            Readonly = false
+        });
+
+        const string dataLoaderJobObjectKeyParameterName = "objectKey";
         var batchJobDefinition = new EcsJobDefinition(this, "data-loader-job-definition", new EcsJobDefinitionProps
         {
             JobDefinitionName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
             Timeout = AmazonCDK.Duration.Minutes(1),
+            Parameters = new Dictionary<string, object>
+            {
+                { dataLoaderJobObjectKeyParameterName, "sample-data.csv" }
+            },
             Container = new EcsFargateContainerDefinition(this, "data-loader-job-container-definition",
                 new EcsFargateContainerDefinitionProps
                 {
                     AssignPublicIp = false,
-                    Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementApiRepository,
-                        appSettings.Service.ApiContainer.Tag),
-                    Cpu = 0.5,
-                    Memory = AmazonCDK.Size.Gibibytes(1),
+                    Image = ContainerImage.FromEcrRepository(ciCdStack.JpmcOrderManagementDataLoaderRepository, appSettings.Service.DataLoaderContainer.Tag),
+                    Cpu = appSettings.Service.DataLoaderContainer.CPU / 1024.0,
+                    Memory = AmazonCDK.Size.Mebibytes(appSettings.Service.DataLoaderContainer.Memory),
                     Environment = new Dictionary<string, string>
                     {
-                        { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
-                        {
-                            $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName",
-                            Constants.SolutionNameToLower
-                        },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__Environment", appSettings.Environment },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DownloadToFile", $"{ecsDataLoaderVolume.ContainerPath}/data.csv" },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__Job__BucketName", s3Bucket.BucketName },
                         { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
+                        { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", batchDataLoaderTaskLogGroup.LogGroupName }
+                    },
+                    JobRole = new Role(this, "data-loader-job-role", new RoleProps
+                    {
+                        RoleName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
+                        AssumedBy = new ServicePrincipal("ecs-tasks.amazonaws.com", new ServicePrincipalOpts
                         {
-                            $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup",
-                            batchDataLoaderTaskLogGroup.LogGroupName
-                        },
-                        { $"{Constants.ComputeEnvironmentVariablesPrefix}XRay__Enable", "false" },
+                            Region = Region
+                        })
+                    }),
+                    ReadonlyRootFilesystem = true,
+                    Command = ["--Service:Job:ObjectKey", $"Ref::{dataLoaderJobObjectKeyParameterName}"]
+                }),
+        });
+        
+        batchJobDefinition.Container.AddVolume(ecsDataLoaderVolume);
+
+        s3Bucket.GrantRead(batchJobDefinition.Container.JobRole!);
+        batchJobDefinition.Container.JobRole!.AttachInlinePolicy(dynamoDbIamPolicy);
+        batchJobDefinition.Container.JobRole!.AttachInlinePolicy(cloudWatchLogsIamPolicy);
+        
+        s3Bucket.EnableEventBridgeNotification();
+
+        var eventBus = new EventBus(this, "event-bus", new EventBusProps
+        {
+            EventBusName = $"{Constants.SolutionNameId}-{appSettings.Environment}"
+        });
+
+        var defaultEventBusToSolutionEventBusS3 = new Rule(this, "default-solution-event-bus-s3", new RuleProps
+        {
+            RuleName = $"{Constants.SolutionNameId}-{appSettings.Environment}-default-to-solution-event-bus-s3",
+            Enabled = true,
+            EventPattern = new EventPattern
+            {
+                Source = ["aws.s3"],
+                Detail = new Dictionary<string, object>
+                {
+                    {
+                        "bucket", new Dictionary<string, object>
+                        {
+                            { "name", new[] { s3Bucket.BucketName } }
+                        }
                     }
-                })
+                }
+            },
+            EventBus = EventBus.FromEventBusName(this, "default-event-bus", "default"),
+            Targets =
+            [
+                new Amazon.CDK.AWS.Events.Targets.EventBus(
+                    eventBus,
+                    new Amazon.CDK.AWS.Events.Targets.EventBusProps
+                    {
+                        DeadLetterQueue = new Queue(this, "default-solution-event-bus-s3-dlq", new QueueProps
+                        {
+                            QueueName = $"{Constants.SolutionNameId}-{appSettings.Environment}-default-to-solution-event-bus-s3-dlq"
+                        })
+                    })
+            ]
+        });
+
+        var s3ToBatchRule = new Rule(this, "s3-object-created-to-batch", new RuleProps
+        {
+            RuleName = $"{Constants.SolutionNameId}-{appSettings.Environment}-s3-object-created-to-batch",
+            Enabled = true,
+            EventBus = eventBus,
+            EventPattern = new EventPattern
+            {
+                Source = ["aws.s3"],
+                DetailType = ["Object Created"],
+                Detail = new Dictionary<string, object>
+                {
+                    {
+                        "bucket", new Dictionary<string, object>
+                        {
+                            { "name", new[] { s3Bucket.BucketName } }
+                        }
+                    }
+                }
+            },
+            Targets =
+            [
+                new BatchJob(
+                    jobQueue.JobQueueArn,
+                    this,
+                    batchJobDefinition.JobDefinitionArn,
+                    this,
+                    new BatchJobProps
+                    {
+                        JobName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
+                        Event = RuleTargetInput.FromObject(new Dictionary<string, object>
+                        {
+                            {
+                                "Parameters", new Dictionary<string, object>
+                                {
+                                    { dataLoaderJobObjectKeyParameterName, EventField.FromPath("$.detail.object.key") }
+                                }
+                            }
+                        }),
+                        RetryAttempts = 2,
+                        MaxEventAge = AmazonCDK.Duration.Hours(2),
+                        DeadLetterQueue = new Queue(this, "s3-object-created-to-dlq", new QueueProps
+                        {
+                            QueueName = $"{Constants.SolutionNameId}-{appSettings.Environment}-s3-object-created-to-dlq"
+                        })
+                    })
+            ]
         });
     }
 }

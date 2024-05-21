@@ -21,7 +21,17 @@ public class CiCdStack : AmazonCDK.Stack
             EmptyOnDelete = true,
             RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
         });
+
+        JpmcOrderManagementDataLoaderRepository = new Repository(this, "ecr-data-loader", new RepositoryProps
+        {
+            RepositoryName = $"{Constants.SolutionNameId}-data-loader",
+            ImageScanOnPush = true,
+            EmptyOnDelete = true,
+            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
+        });
     }
 
     public Repository JpmcOrderManagementApiRepository { get; private set; }
+    
+    public Repository JpmcOrderManagementDataLoaderRepository { get; private set; }
 }

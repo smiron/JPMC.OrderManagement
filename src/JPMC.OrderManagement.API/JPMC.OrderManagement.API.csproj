@@ -13,13 +13,17 @@
 	<ContainerRepository>jpmc-order-management-api</ContainerRepository>
   </PropertyGroup>
 
+  <PropertyGroup>
+	<AssemblyName>entrypoint</AssemblyName>
+  </PropertyGroup>
+
   <ItemGroup>
 	<InternalsVisibleTo Include="JPMC.OrderManagement.API.Tests" />
 	<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
   <ItemGroup>
-	<PackageReference Include="AWS.Logger.AspNetCore" Version="3.5.1" />
+	<PackageReference Include="AWS.Logger.AspNetCore" Version="3.5.2" />
 	<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.300" />
 	<PackageReference Include="AWSXRayRecorder.Core" Version="2.14.0" />
 	<PackageReference Include="AWSXRayRecorder.Handlers.AwsSdk" Version="2.12.0" />
@@ -29,11 +33,11 @@
 	<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 	<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
 	<PackageReference Include="NSwag.AspNetCore" Version="14.0.7" />
-	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.303.4" />
+	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.303.7" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JPMC.OrderManagement.Common\JPMC.OrderManagement.Common.csproj" />
+	<ProjectReference Include="..\JPMC.OrderManagement.Common\JPMC.OrderManagement.Common.csproj" />
   </ItemGroup>
 
 </Project>

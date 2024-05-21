@@ -26,6 +26,7 @@ var xrayEnable = configuration.GetValue<bool>("XRay:Enable");
 var cloudWatchLogsEnable = configuration.GetValue<bool>("CloudWatchLogs:Enable");
 var cloudWatchLogGroup = configuration.GetValue<string>("CloudWatchLogs:LogGroup");
 var dynamoDbTableName = configuration.GetValue<string>("Service:DynamoDbTableName");
+var httpLogging = configuration.GetValue<bool>("Service:HttpLogging");
 
 var awsOptions = configuration.GetAWSOptions();
 
@@ -98,7 +99,10 @@ var app = builder.Build();
 
 app.UsePathBase(new PathString("/api"));
 
-app.UseHttpLogging();
+if (httpLogging)
+{
+    app.UseHttpLogging();
+}
 
 app.MapHealthChecks("/health");
 

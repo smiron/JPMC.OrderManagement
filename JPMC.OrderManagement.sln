@@ -13,6 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{5572632B-725D-47
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
 		cdk.json = cdk.json
+		Dockerfile = Dockerfile
 		global.json = global.json
 		README.md = README.md
 		data\sample-data.csv = data\sample-data.csv
@@ -24,7 +25,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.API.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.Common", "src\JPMC.OrderManagement.Common\JPMC.OrderManagement.Common.csproj", "{03496F82-CEAD-4CFD-AA25-856E45539905}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JPMC.OrderManagement.Common.Tests", "tests\JPMC.OrderManagement.Common.Tests\JPMC.OrderManagement.Common.Tests.csproj", "{73F30D95-12A2-4E28-AAC2-2BEC4006A4DE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.Common.Tests", "tests\JPMC.OrderManagement.Common.Tests\JPMC.OrderManagement.Common.Tests.csproj", "{73F30D95-12A2-4E28-AAC2-2BEC4006A4DE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JPMC.OrderManagement.DataLoader.Service", "src\JPMC.OrderManagement.DataLoader.Service\JPMC.OrderManagement.DataLoader.Service.csproj", "{FF497A72-F934-460F-854D-C14F1D564AF6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -52,6 +55,10 @@ Global
 		{73F30D95-12A2-4E28-AAC2-2BEC4006A4DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73F30D95-12A2-4E28-AAC2-2BEC4006A4DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73F30D95-12A2-4E28-AAC2-2BEC4006A4DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF497A72-F934-460F-854D-C14F1D564AF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF497A72-F934-460F-854D-C14F1D564AF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF497A72-F934-460F-854D-C14F1D564AF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF497A72-F934-460F-854D-C14F1D564AF6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -62,6 +69,7 @@ Global
 		{8627D9F8-D846-4730-ADC4-44E00CDA7B1F} = {5033E641-B4F1-4C98-9040-8F5165145602}
 		{03496F82-CEAD-4CFD-AA25-856E45539905} = {CC197776-D3BF-4034-AE83-791BD7618C5A}
 		{73F30D95-12A2-4E28-AAC2-2BEC4006A4DE} = {5033E641-B4F1-4C98-9040-8F5165145602}
+		{FF497A72-F934-460F-854D-C14F1D564AF6} = {CC197776-D3BF-4034-AE83-791BD7618C5A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CC06B140-417F-402B-BA72-5670807BD04A}

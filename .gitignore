@@ -4,5 +4,6 @@ src/**/obj
 tests/**/bin
 tests/**/obj
 **/*.csproj.user
+**/*.DotSettings.user
 cdk.out
 .idea/

@@ -14,19 +14,28 @@ public class AppSettings
 public class ServiceAppSettings
 {
     public ApiContainerSettings ApiContainer { get; set; } = new();
+    
+    public ContainerSettings DataLoaderContainer { get; set; } = new();
 }
 
-public class ApiContainerSettings
+public class ContainerSettings
 {
     public string Tag { get; set; } = "latest";
 
     // ReSharper disable once InconsistentNaming
-    public int CPU { get; set; } = 1024;
+    public double CPU { get; set; } = 512;
 
-    public int Memory { get; set; } = 2048;
+    public int Memory { get; set; } = 1024;
+}
+
+public class ApiContainerSettings : ContainerSettings
+{
+    public int MinInstanceCount { get; set; } = 1;
+    
+    public int MaxInstanceCount { get; set; } = 1;
 }
 
 public class LoadBalancerAppSettings
 {
-    public string? RestrictIngressToCidr { get; set; } = null;
+    public string[] RestrictIngressToCidrs { get; set; } = new string[]{};
 }
