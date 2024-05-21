@@ -5,11 +5,17 @@ using Constructs;
 using Amazon.CDK.AWS.ECS;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.Events;
+using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
 using JPMC.OrderManagement.Common;
+using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.SQS;
+
 using AmazonCDK = Amazon.CDK;
 using DDB = Amazon.CDK.AWS.DynamoDB;
-using Amazon.CDK.AWS.S3;
+using EventBus = Amazon.CDK.AWS.Events.EventBus;
+using EventBusProps = Amazon.CDK.AWS.Events.EventBusProps;
 using LogGroupProps = Amazon.CDK.AWS.Logs.LogGroupProps;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
@@ -273,10 +279,15 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             Readonly = false
         });
 
+        const string dataLoaderJobObjectKeyParameterName = "objectKey";
         var batchJobDefinition = new EcsJobDefinition(this, "data-loader-job-definition", new EcsJobDefinitionProps
         {
             JobDefinitionName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
             Timeout = AmazonCDK.Duration.Minutes(1),
+            Parameters = new Dictionary<string, object>
+            {
+                { dataLoaderJobObjectKeyParameterName, "sample-data.csv" }
+            },
             Container = new EcsFargateContainerDefinition(this, "data-loader-job-container-definition",
                 new EcsFargateContainerDefinitionProps
                 {
@@ -301,8 +312,9 @@ internal sealed class ComputeStack : AmazonCDK.Stack
                             Region = Region
                         })
                     }),
-                    ReadonlyRootFilesystem = true
-                })
+                    ReadonlyRootFilesystem = true,
+                    Command = ["--Service:Job:ObjectKey", $"Ref::{dataLoaderJobObjectKeyParameterName}"]
+                }),
         });
         
         batchJobDefinition.Container.AddVolume(ecsDataLoaderVolume);
@@ -310,5 +322,92 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         s3Bucket.GrantRead(batchJobDefinition.Container.JobRole!);
         batchJobDefinition.Container.JobRole!.AttachInlinePolicy(dynamoDbIamPolicy);
         batchJobDefinition.Container.JobRole!.AttachInlinePolicy(cloudWatchLogsIamPolicy);
+        
+        s3Bucket.EnableEventBridgeNotification();
+
+        var eventBus = new EventBus(this, "event-bus", new EventBusProps
+        {
+            EventBusName = $"{Constants.SolutionNameId}-{appSettings.Environment}"
+        });
+
+        var defaultEventBusToSolutionEventBusS3 = new Rule(this, "default-solution-event-bus-s3", new RuleProps
+        {
+            RuleName = $"{Constants.SolutionNameId}-{appSettings.Environment}-default-to-solution-event-bus-s3",
+            Enabled = true,
+            EventPattern = new EventPattern
+            {
+                Source = ["aws.s3"],
+                Detail = new Dictionary<string, object>
+                {
+                    {
+                        "bucket", new Dictionary<string, object>
+                        {
+                            { "name", new[] { s3Bucket.BucketName } }
+                        }
+                    }
+                }
+            },
+            EventBus = EventBus.FromEventBusName(this, "default-event-bus", "default"),
+            Targets =
+            [
+                new Amazon.CDK.AWS.Events.Targets.EventBus(
+                    eventBus,
+                    new Amazon.CDK.AWS.Events.Targets.EventBusProps
+                    {
+                        DeadLetterQueue = new Queue(this, "default-solution-event-bus-s3-dlq", new QueueProps
+                        {
+                            QueueName = $"{Constants.SolutionNameId}-{appSettings.Environment}-default-to-solution-event-bus-s3-dlq"
+                        })
+                    })
+            ]
+        });
+
+        var s3ToBatchRule = new Rule(this, "s3-object-created-to-batch", new RuleProps
+        {
+            RuleName = $"{Constants.SolutionNameId}-{appSettings.Environment}-s3-object-created-to-batch",
+            Enabled = true,
+            EventBus = eventBus,
+            EventPattern = new EventPattern
+            {
+                Source = ["aws.s3"],
+                DetailType = ["Object Created"],
+                Detail = new Dictionary<string, object>
+                {
+                    {
+                        "bucket", new Dictionary<string, object>
+                        {
+                            { "name", new[] { s3Bucket.BucketName } }
+                        }
+                    }
+                }
+            },
+            Targets =
+            [
+                new BatchJob(
+                    jobQueue.JobQueueArn,
+                    this,
+                    batchJobDefinition.JobDefinitionArn,
+                    this,
+                    new BatchJobProps
+                    {
+                        JobName = $"{Constants.SolutionNameId}-{appSettings.Environment}-data-loader",
+                        Event = RuleTargetInput.FromObject(new Dictionary<string, object>
+                        {
+                            {
+                                "Parameters", new Dictionary<string, object>
+                                {
+                                    { dataLoaderJobObjectKeyParameterName, EventField.FromPath("$.detail.object.key") }
+                                }
+                            }
+                        }),
+                        RetryAttempts = 2,
+                        MaxEventAge = AmazonCDK.Duration.Hours(2),
+                        DeadLetterQueue = new Queue(this, "s3-object-created-to-dlq", new QueueProps
+                        {
+                            QueueName = $"{Constants.SolutionNameId}-{appSettings.Environment}-s3-object-created-to-dlq"
+                        })
+                    })
+            ]
+        });
     }
 }
