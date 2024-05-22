@@ -1,7 +1,11 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
+using Amazon.S3;
 using FakeItEasy;
+using JPMC.OrderManagement.API.Options;
 using JPMC.OrderManagement.API.Services;
 using JPMC.OrderManagement.Common.DataModels;
+using Microsoft.Extensions.Options;
+
 using Order = JPMC.OrderManagement.Common.DataModels.Order;
 
 namespace JPMC.OrderManagement.API.Tests.Services;
@@ -9,14 +13,18 @@ namespace JPMC.OrderManagement.API.Tests.Services;
 public class OrderManagerServiceTests
 {
     private readonly IDynamoDBContext _dynamoDbContext;
+    private readonly IAmazonS3 _s3Client;
+    private readonly IOptions<ServiceOptions> _serviceOptions;
 
     private readonly OrderManagerService _subject;
 
     public OrderManagerServiceTests()
     {
         _dynamoDbContext = A.Fake<IDynamoDBContext>();
+        _s3Client = A.Fake<IAmazonS3>();
+        _serviceOptions = A.Fake<IOptions<ServiceOptions>>();
 
-        _subject = new OrderManagerService(_dynamoDbContext, new DynamoDBOperationConfig());
+        _subject = new OrderManagerService(_dynamoDbContext, _s3Client, _serviceOptions, new DynamoDBOperationConfig());
     }
 
     [Fact]

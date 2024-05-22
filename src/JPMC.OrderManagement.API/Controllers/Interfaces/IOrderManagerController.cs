@@ -12,6 +12,8 @@ internal interface IOrderManagerController
 
     Task<IResult> RemoveOrder(int orderId);
 
+    Task<IResult> BatchLoad();
+
     Task<IResult> CalculatePrice(string symbol, Side side, int amount);
 
     Task<IResult> PlaceTrade(string symbol, Side side, int amount);

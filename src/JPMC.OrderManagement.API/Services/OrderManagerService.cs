@@ -1,14 +1,22 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
+using Amazon.S3;
+using Amazon.S3.Model;
+using JPMC.OrderManagement.API.Options;
 using JPMC.OrderManagement.API.Services.Interfaces;
+using Microsoft.Extensions.Options;
 using DataModels = JPMC.OrderManagement.Common.DataModels;
 using Order = JPMC.OrderManagement.API.ApiModels.Order;
 using Side = JPMC.OrderManagement.Common.DataModels.Side;
 
 namespace JPMC.OrderManagement.API.Services;
 
-internal class OrderManagerService(IDynamoDBContext dynamoDbContext, DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManagerService
+internal class OrderManagerService(
+    IDynamoDBContext dynamoDbContext, 
+    IAmazonS3 s3Client, 
+    IOptions<ServiceOptions> serviceOptions,
+    DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManagerService
 {
     private const string Gsi1IndexName = "GSI1";
 
@@ -133,6 +141,28 @@ internal class OrderManagerService(IDynamoDBContext dynamoDbContext, DynamoDBOpe
         {
             throw new OrderManagerException("Order does not exist.");
         }
+    }
+
+    public async Task<OrderBatchLoad> BatchLoad()
+    {
+        var creationTimestamp = DateTime.UtcNow;
+        var expirationTimestamp = creationTimestamp.AddHours(1);
+
+        var preSignedUrl = await s3Client.GetPreSignedURLAsync(new GetPreSignedUrlRequest
+        {
+            BucketName = serviceOptions.Value.BatchLoadingS3Bucket,
+            Expires = expirationTimestamp,
+            Key = $"{serviceOptions.Value.BatchLoadingS3ObjectPrefix}/{creationTimestamp:yyyyMMddHHmmss}-{Guid.NewGuid():D}.csv",
+            Protocol = Protocol.HTTPS,
+            Verb = HttpVerb.PUT
+        });
+
+        return new OrderBatchLoad
+        {
+            CreationTimestampUtc = creationTimestamp,
+            ExpirationTimestampUtc = expirationTimestamp,
+            PreSignedUrl = preSignedUrl
+        };
     }
 
     public async Task<int> CalculatePrice(string symbol, Side side, int amount)

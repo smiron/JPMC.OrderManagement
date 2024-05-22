@@ -6,7 +6,7 @@ using JPMC.OrderManagement.Common.DataModels;
 
 namespace JPMC.OrderManagement.API.Controllers;
 
-internal class OrderManagerController(IOrderManagerService orderManagerService, IDateTimeService dateTimeService) : IOrderManagerController
+internal class OrderManagerController(IOrderManagerService orderManagerService, IDateTimeService dateTimeService, ILogger<OrderManagerController> logger) : IOrderManagerController
 {
     public async Task<IResult> GetOrder(int orderId)
     {
@@ -53,6 +53,20 @@ internal class OrderManagerController(IOrderManagerService orderManagerService, 
         catch (OrderManagerException)
         {
             return Results.NotFound("Order does not exist.");
+        }
+    }
+
+    public async Task<IResult> BatchLoad()
+    {
+        try
+        {
+            var batchLoadOrder = await orderManagerService.BatchLoad();
+            return Results.Ok(batchLoadOrder);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, $"Exception occurred while running the {nameof(BatchLoad)} operation.");
+            return Results.StatusCode(500);
         }
     }
 
