@@ -152,7 +152,7 @@ internal class OrderManagerService(
         {
             BucketName = serviceOptions.Value.BatchLoadingS3Bucket,
             Expires = expirationTimestamp,
-            Key = $"batch-load/{creationTimestamp:yyyyMMddHHmmss}-{Guid.NewGuid():D}.csv",
+            Key = $"{serviceOptions.Value.BatchLoadingS3ObjectPrefix}/{creationTimestamp:yyyyMMddHHmmss}-{Guid.NewGuid():D}.csv",
             Protocol = Protocol.HTTPS,
             Verb = HttpVerb.PUT
         });
