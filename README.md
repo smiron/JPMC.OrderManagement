@@ -45,13 +45,46 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
     cdk bootstrap --termination-protection=true
     ```
 
-2. Deploy solution.
+2. Update the deployment config `src/JPMC.OrderManagement.Stack/appsettings.json`.
+
+    - Set the `Environment` config key to the environment name.
+    - Set the `Region` config key to the AWS region to be used for deployment.
+    - Set the service container CPU and Memory resource limits. Setting this value to `1024` equals 1 vCPU as defined in AWS.
+    - Set the API container auto-scaling properties. The solution is configured to automatically scale up or down based on the container CPU usage. Set `Service:ApiContainer:MinInstanceCount` and `Service:ApiContainer:MaxInstanceCount` properties to the minimum and maximum number of container instances.
+    - Set the `LoadBalancer:RestrictIngressToCidrs` config key to match CIDR addresses that need to access the solution.
+      For example, the deployment config example will only allow connections from `86.21.50.20` and `86.21.50.22`.
+
+    Example deployment config:
+
+      ```json
+      {
+        "Environment": "dev",
+        "Region": "eu-west-2",
+        "Service": {
+          "ApiContainer": {
+            "CPU": 256,
+            "Memory": 1024,
+            "MinInstanceCount": 1,
+            "MaxInstanceCount": 5
+          },
+          "DataLoaderContainer": {
+            "CPU": 256,
+            "Memory": 1024
+          }
+        },
+        "LoadBalancer": {
+          "RestrictIngressToCidrs": [ "86.21.50.20/32", "86.21.50.22/32" ]
+        }
+      }
+      ```
+
+3. Deploy solution.
 
     ```bash
     cdk deploy --all --require-approval=never --outputs-file cdk.outputs.json
     ```
 
-3. Obtain the swagger endpoint URL.
+4. Obtain the swagger endpoint URL.
 
     ```bash
     jq '.["JPMC-OrderManagement-NetworkingStack"]["ApplicationSwaggerEndpointHttpUrl"]' \

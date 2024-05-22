@@ -20,8 +20,6 @@ public class ServiceAppSettings
 
 public class ContainerSettings
 {
-    public string Tag { get; set; } = "latest";
-
     // ReSharper disable once InconsistentNaming
     public double CPU { get; set; } = 512;
 
