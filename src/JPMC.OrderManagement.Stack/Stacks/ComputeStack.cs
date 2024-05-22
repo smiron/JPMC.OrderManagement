@@ -32,6 +32,8 @@ internal sealed class ComputeStack : AmazonCDK.Stack
     {
         TargetUtilizationPercent = 80
     };
+
+    private const string BatchLoadingS3ObjectPrefix = "batch-load";
     
     internal ComputeStack(
         Construct scope, 
@@ -66,6 +68,17 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             ContributorInsightsEnabled = false,
             TimeToLiveAttribute = "TTL",
             TableClass = DDB.TableClass.STANDARD
+        });
+
+        var s3Bucket = new Bucket(this, "bucket", new BucketProps
+        {
+            BucketName = $"{Constants.SolutionNameId}-{appSettings.Environment}",
+            BlockPublicAccess = BlockPublicAccess.BLOCK_ALL,
+            EnforceSSL = true,
+            ObjectOwnership = ObjectOwnership.BUCKET_OWNER_ENFORCED,
+            PublicReadAccess = false,
+            Encryption = BucketEncryption.S3_MANAGED,
+            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
         });
 
         var ddbTableGsi1Props = new DDB.GlobalSecondaryIndexProps
@@ -176,8 +189,46 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             ]
         });
 
+        var s3ReadIamPolicy = new Policy(this, "s3-read-iam-policy", new PolicyProps
+        {
+            PolicyName = $"S3-{s3Bucket.BucketName}-Read",
+            Statements =
+            [
+                new PolicyStatement(new PolicyStatementProps
+                {
+                    Sid = "AllowActions",
+                    Effect = Effect.ALLOW,
+                    Actions =
+                    [
+                        "s3:GetObject"
+                    ],
+                    Resources = [$"{s3Bucket.BucketArn}/{BatchLoadingS3ObjectPrefix}/*"]
+                })
+            ]
+        });
+
+        var s3WriteIamPolicy = new Policy(this, "s3-write-iam-policy", new PolicyProps
+        {
+            PolicyName = $"S3-{s3Bucket.BucketName}-Write",
+            Statements =
+            [
+                new PolicyStatement(new PolicyStatementProps
+                {
+                    Sid = "AllowActions",
+                    Effect = Effect.ALLOW,
+                    Actions =
+                    [
+                        "s3:PutObject"
+                    ],
+                    Resources = [$"{s3Bucket.BucketArn}/{BatchLoadingS3ObjectPrefix}/*"]
+                })
+            ]
+        });
+
         ecsApiTask.TaskRole.AttachInlinePolicy(dynamoDbIamPolicy);
         ecsApiTask.TaskRole.AttachInlinePolicy(cloudWatchLogsIamPolicy);
+        // this policy is needed for preSigned Urls to be able to write to S3
+        ecsApiTask.TaskRole.AttachInlinePolicy(s3WriteIamPolicy);
 
         ecsApiTask.AddContainer("api", new ContainerDefinitionOptions
         {
@@ -190,6 +241,8 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             {
                 { "ASPNETCORE_ENVIRONMENT", appSettings.Environment },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__DynamoDbTableName", Constants.SolutionNameToLower },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__BatchLoadingS3Bucket", s3Bucket.BucketName },
+                { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__BatchLoadingS3ObjectPrefix", BatchLoadingS3ObjectPrefix },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}Service__HttpLogging", "false" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__Enable", "true" },
                 { $"{Constants.ComputeEnvironmentVariablesPrefix}CloudWatchLogs__LogGroup", ecsApiTaskLogGroup.LogGroupName },
@@ -238,17 +291,6 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         ecsService.AttachToApplicationTargetGroup(networkingStack.AlbTargetGroup);
 
         // Blob import related infrastructure
-        var s3Bucket = new Bucket(this, "bucket", new BucketProps
-        {
-            BucketName = $"{Constants.SolutionNameId}-{appSettings.Environment}",
-            BlockPublicAccess = BlockPublicAccess.BLOCK_ALL,
-            EnforceSSL = true,
-            ObjectOwnership = ObjectOwnership.BUCKET_OWNER_ENFORCED,
-            PublicReadAccess = false,
-            Encryption = BucketEncryption.S3_MANAGED,
-            RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY
-        });
-
         var batchEnvironment = new FargateComputeEnvironment(this, "batch-environment",
             new FargateComputeEnvironmentProps
             {
@@ -319,9 +361,9 @@ internal sealed class ComputeStack : AmazonCDK.Stack
         
         batchJobDefinition.Container.AddVolume(ecsDataLoaderVolume);
 
-        s3Bucket.GrantRead(batchJobDefinition.Container.JobRole!);
         batchJobDefinition.Container.JobRole!.AttachInlinePolicy(dynamoDbIamPolicy);
         batchJobDefinition.Container.JobRole!.AttachInlinePolicy(cloudWatchLogsIamPolicy);
+        batchJobDefinition.Container.JobRole!.AttachInlinePolicy(s3ReadIamPolicy);
         
         s3Bucket.EnableEventBridgeNotification();
 
