@@ -3,6 +3,9 @@
 - [Getting started](#getting-started)
   - [Software requirements](#software-requirements)
   - [Running the solution in AWS](#running-the-solution-in-aws)
+  - [Batch-loading data](#batch-loading-data)
+    - [Sample data](#sample-data)
+    - [Additional data](#additional-data)
 - [Solution](#solution)
   - [Design considerations](#design-considerations)
     - [DynamoDB Single-Table Design](#dynamodb-single-table-design)
@@ -55,14 +58,19 @@ Please follow the below steps to deploy and run the solution in your AWS cloud a
     -r cdk.outputs.json
     ```
 
-### Batch upload order 
+### Batch-loading data
 
-1. Navigate to the swagger page and use the `/api/orders/batch-load` functionality to generate a presigned Url.
-2. Use the generated presigned Url to upload data. The system will process the data async.
+#### Sample data
 
-    ```bash
-    curl -X PUT -T ./data/sample-data.csv  <presigned-url>
-    ```
+  Please run the below command to batch-load the provided sample data.
+
+  ```bash
+  ./batch-load.sh ./data/sample-data.csv
+  ```
+
+#### Additional data
+
+The `batch-load.sh` script is designed for batch-loading data into the system. To ensure compatibility and proper processing, the data file provided must be in `CSV` format. Additionally, the file has to have the following specific headers: `orderId`, `symbol`, `side`, `amount`, and `price`. This format requirement is critical for the batch-load process to function correctly.
 
 ## Solution
 
