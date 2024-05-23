@@ -8,8 +8,7 @@ on:
 
 jobs:
 
-  build:
-
+  buildDockerImages:
     runs-on: ubuntu-latest
 
     steps:
