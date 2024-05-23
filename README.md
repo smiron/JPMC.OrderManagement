@@ -21,7 +21,7 @@
 
 ---
 
-[![Build & Test](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml) [![Analyze Security (CodeQL)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/codeql.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/codeql.yml) [![Docker Image CI](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/docker-image.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/docker-image.yml)
+[![Build & Test](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml) [![Analyze Security (CodeQL)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/codeql.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/codeql.yml) [![Build Docker Images](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/docker-image.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/docker-image.yml)
 
 ![Architecture Diagram](./resources/architecture.drawio.png)
 
