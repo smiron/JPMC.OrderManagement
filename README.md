@@ -21,6 +21,8 @@
 
 ---
 
+[![.NET](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml)
+
 ![Architecture Diagram](./resources/architecture.drawio.png)
 
 ## Getting started
