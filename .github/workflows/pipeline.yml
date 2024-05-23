@@ -1,13 +1,15 @@
-name: Build, Dockerize, Synth
+name: Build, Dockerize, Analyze with CodeQL, Synth
 
 on:
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  schedule:
+    - cron: '26 5 * * 5'
 
 jobs:
-  build-test-synth:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,10 +30,55 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
+  analyze-code-ql:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+    permissions:
+      security-events: write
+      packages: read
+
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: csharp
+          build-mode: autobuild
+          
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+
+  docker-images:
+    runs-on: ubuntu-latest
+    needs: [build-and-test, analyze-code-ql]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Build Docker images
         run: |
           docker build -t jpmc-order-management-data-loader:$(date +%s) -f Dockerfile --platform "linux/amd64" --target service --build-arg "mainProject=JPMC.OrderManagement.DataLoader.Service" .
           docker build -t jpmc-order-management-api:$(date +%s) -f Dockerfile --platform "linux/amd64" --target restapi --build-arg "mainProject=JPMC.OrderManagement.API" .
+
+  cdk-synth:
+    runs-on: ubuntu-latest
+    needs: [docker-images]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -51,4 +98,3 @@ jobs:
           done
   
           echo "All stacks have been synthesized."
-  
