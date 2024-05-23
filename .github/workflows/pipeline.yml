@@ -30,10 +30,11 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
-  analyze-code-ql:
-    name: analyze-${{ matrix.language }}
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+  analyze-with-code-ql:
+    # Uncomment if we need to analyze other code written in other programming languages
+    # name: analyze-with-code-ql-${{ matrix.language }}
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 360
     permissions:
       security-events: write
       packages: read
@@ -61,7 +62,7 @@ jobs:
 
   docker-images:
     runs-on: ubuntu-latest
-    needs: [build-and-test, analyze-code-ql]
+    needs: [build-and-test, analyze-with-code-ql]
 
     steps:
       - name: Checkout code
