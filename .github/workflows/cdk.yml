@@ -1,0 +1,35 @@
+name: CDK Synth
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  cdkSynth:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+          node-version: '18'
+          
+    - name: Install AWS CDK
+      run: npm install -g aws-cdk
+    
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: CDK Synth All
+      shell: bash
+      run: |
+        for stack in $(cdk list); do
+          echo "Synthesizing stack: $stack"
+          cdk synth $stack
+          echo "Completed synthesizing $stack"
+        done
+
+        echo "All stacks have been synthesized."
