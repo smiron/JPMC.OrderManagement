@@ -21,7 +21,7 @@
 
 ---
 
-[![.NET](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml)[![CodeQL](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/github-code-scanning/codeql)
+[![.NET](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/dotnet.yml) [![CodeQL](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/smiron/JPMC.OrderManagement/actions/workflows/github-code-scanning/codeql)
 
 ![Architecture Diagram](./resources/architecture.drawio.png)
 
