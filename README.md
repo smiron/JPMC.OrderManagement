@@ -25,6 +25,9 @@
 
 ![Architecture Diagram](./resources/architecture.drawio.png)
 
+_*The grayed out architecture elements are not part of the current solution as these resources significantly impact operational cost.
+It is strongly recommended that the grayed out resources are implemented in a production environment._
+
 ## Getting started
 
 ### Software requirements
