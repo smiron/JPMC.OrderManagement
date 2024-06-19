@@ -20,7 +20,7 @@
   <ItemGroup>
 	<PackageReference Include="AWS.Logger.AspNetCore" Version="3.5.3" />
 	<PackageReference Include="AWS.Logger.Core" Version="3.3.3" />
-	<PackageReference Include="AWSSDK.S3" Version="3.7.309.4" />
+	<PackageReference Include="AWSSDK.S3" Version="3.7.309.5" />
 	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.303.22" />
 	<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
 	<PackageReference Include="CsvHelper" Version="32.0.3" />
