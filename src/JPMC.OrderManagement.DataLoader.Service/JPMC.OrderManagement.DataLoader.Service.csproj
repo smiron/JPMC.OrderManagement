@@ -23,7 +23,7 @@
 	<PackageReference Include="AWSSDK.S3" Version="3.7.309.5" />
 	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.303.23" />
 	<PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-	<PackageReference Include="CsvHelper" Version="32.0.3" />
+	<PackageReference Include="CsvHelper" Version="33.0.0" />
 	<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
 	<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
 	<PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
