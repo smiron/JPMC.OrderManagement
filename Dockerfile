@@ -23,13 +23,13 @@ WORKDIR /app/src/$mainProject
 RUN dotnet publish --no-restore -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/runtime:${netVersion} AS service
-RUN apt update && apt upgrade
+RUN apt update && apt upgrade -y
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "entrypoint.dll"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:${netVersion} AS restapi
-RUN apt update && apt upgrade
+RUN apt update && apt upgrade -y
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "entrypoint.dll"]
