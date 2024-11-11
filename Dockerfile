@@ -29,7 +29,7 @@ COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "entrypoint.dll"]
 
 FROM mcr.microsoft.com/dotnet/aspnet:${netVersion} AS restapi
-RUN apt update && apt upgrade
+RUN apt update && apt upgrade -y
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "entrypoint.dll"]
