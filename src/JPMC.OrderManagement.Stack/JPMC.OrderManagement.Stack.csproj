@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Amazon.CDK.Lib" Version="2.171.0" />
+	<PackageReference Include="Amazon.CDK.Lib" Version="2.172.0" />
 	<PackageReference Include="Constructs" Version="10.4.2" />
 	<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
 	<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
