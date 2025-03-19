@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 	<TargetFramework>net8.0</TargetFramework>
@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.404.5" />
+	<PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.406.3" />
   </ItemGroup>
 
 </Project>
