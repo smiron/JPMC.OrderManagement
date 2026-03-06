@@ -40,7 +40,7 @@ public class OrderManagerServiceTests
             Price = 20
         };
         A.CallTo(() => _dynamoDbContext
-            .LoadAsync<Order>("ORDER#1", "ORDER#1", A<DynamoDBOperationConfig>._, A<CancellationToken>._))
+            .LoadAsync<Order>("ORDER#1", "ORDER#1", A<LoadConfig>._, A<CancellationToken>._))
             .Returns(dynamoDbRecord);
 
         // Act
@@ -48,7 +48,7 @@ public class OrderManagerServiceTests
 
         // Assert
         A.CallTo(() =>
-            _dynamoDbContext.LoadAsync<Order>("ORDER#1", "ORDER#1", A<DynamoDBOperationConfig>._,
+            _dynamoDbContext.LoadAsync<Order>("ORDER#1", "ORDER#1", A<LoadConfig>._,
                 A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         Assert.NotNull(order);
         Assert.Equal(dynamoDbRecord.Id, order.Id.ToString());
@@ -65,7 +65,7 @@ public class OrderManagerServiceTests
         const int orderId = 1;
         Order dynamoDbRecord = null!;
         A.CallTo(() => _dynamoDbContext
-                .LoadAsync<Order>("ORDER#1", "ORDER#1", A<DynamoDBOperationConfig>._, A<CancellationToken>._))
+                .LoadAsync<Order>("ORDER#1", "ORDER#1", A<LoadConfig>._, A<CancellationToken>._))
             .Returns(dynamoDbRecord);
 
         // Act
@@ -73,7 +73,7 @@ public class OrderManagerServiceTests
 
         // Assert
         A.CallTo(() =>
-            _dynamoDbContext.LoadAsync<Order>("ORDER#1", "ORDER#1", A<DynamoDBOperationConfig>._,
+            _dynamoDbContext.LoadAsync<Order>("ORDER#1", "ORDER#1", A<LoadConfig>._,
                 A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         Assert.Null(order);
     }

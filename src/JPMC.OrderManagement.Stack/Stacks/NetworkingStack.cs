@@ -5,6 +5,7 @@ using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ElasticLoadBalancingV2;
 using JPMC.OrderManagement.Common;
 using Protocol = Amazon.CDK.AWS.ElasticLoadBalancingV2.Protocol;
+using IpAddressType = Amazon.CDK.AWS.ElasticLoadBalancingV2.IpAddressType;
 
 namespace JPMC.OrderManagement.Stack.Stacks;
 

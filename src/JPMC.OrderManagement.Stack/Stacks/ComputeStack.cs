@@ -63,9 +63,9 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             RemovalPolicy = AmazonCDK.RemovalPolicy.DESTROY,
             Encryption = DDB.TableEncryption.AWS_MANAGED,
             BillingMode = DDB.BillingMode.PROVISIONED,
-            PointInTimeRecovery = false,
+            PointInTimeRecoverySpecification = new DDB.PointInTimeRecoverySpecification { PointInTimeRecoveryEnabled = false },
             DeletionProtection = true,
-            ContributorInsightsEnabled = false,
+            ContributorInsightsSpecification = new DDB.ContributorInsightsSpecification { Enabled = false },
             TimeToLiveAttribute = "TTL",
             TableClass = DDB.TableClass.STANDARD
         });
@@ -125,7 +125,7 @@ internal sealed class ComputeStack : AmazonCDK.Stack
             ClusterName = genericResourceName,
             Vpc = networkingStack.Vpc,
             EnableFargateCapacityProviders = true,
-            ContainerInsights = true
+            ContainerInsightsV2 = ContainerInsights.ENABLED
         });
         
         ecsCluster.AddDefaultCapacityProviderStrategy([new CapacityProviderStrategy

@@ -62,9 +62,14 @@ builder.Services
         var dynamoDbClient = provider.GetRequiredService<IAmazonDynamoDB>();
         var dynamoDbOperationConfig = provider.GetRequiredService<DynamoDBOperationConfig>();
 
-        return new DynamoDBContext(
-            dynamoDbClient,
-            dynamoDbOperationConfig);
+        return new DynamoDBContextBuilder()
+            .WithDynamoDBClient(() => dynamoDbClient)
+            .ConfigureContext(config =>
+            {
+                config.TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix;
+                config.SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck;
+            })
+            .Build();
     })
     .AddSingleton<IOrderManagerService, OrderManagerService>()
     .AddSingleton<IOrderManagerController, OrderManagerController>()

@@ -1,4 +1,4 @@
-﻿using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Amazon.S3;
@@ -13,12 +13,30 @@ using Side = JPMC.OrderManagement.Common.DataModels.Side;
 namespace JPMC.OrderManagement.API.Services;
 
 internal class OrderManagerService(
-    IDynamoDBContext dynamoDbContext, 
-    IAmazonS3 s3Client, 
+    IDynamoDBContext dynamoDbContext,
+    IAmazonS3 s3Client,
     IOptions<ServiceOptions> serviceOptions,
     DynamoDBOperationConfig dynamoDbOperationConfig) : IOrderManagerService
 {
     private const string Gsi1IndexName = "GSI1";
+
+    private readonly GetTargetTableConfig _getTargetTableConfig = new()
+    {
+        OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+        TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix
+    };
+
+    private readonly LoadConfig _loadConfig = new()
+    {
+        OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+        TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix
+    };
+
+    private readonly ToDocumentConfig _toDocumentConfig = new()
+    {
+        OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+        TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix
+    };
 
     private readonly PutItemOperationConfig _createItemOperationConfig = new()
     {
@@ -49,7 +67,7 @@ internal class OrderManagerService(
         // The initial value for this variable is only used to calculate the DynamoDB record PK and SK.
         // We subsequently override the variable value with the actual record retrieved from DynamoDB
         var order = new DataModels.Order(orderId);
-        order = await dynamoDbContext.LoadAsync<DataModels.Order>(order.Pk, order.Sk, dynamoDbOperationConfig);
+        order = await dynamoDbContext.LoadAsync<DataModels.Order>(order.Pk, order.Sk, _loadConfig);
 
         return order == null
             ? null
@@ -73,11 +91,11 @@ internal class OrderManagerService(
             Price = price
         };
 
-        var createOrderDocument = dynamoDbContext.ToDocument(order, dynamoDbOperationConfig);
+        var createOrderDocument = dynamoDbContext.ToDocument(order, _toDocumentConfig);
 
         try
         {
-            await dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig)
+            await dynamoDbContext.GetTargetTable<DataModels.Order>(_getTargetTableConfig)
                 .PutItemAsync(
                     createOrderDocument,
                     _createItemOperationConfig);
@@ -108,7 +126,7 @@ internal class OrderManagerService(
                 { DataModels.DynamoDbAttributes.ETag, orderToUpdate.ETag },
             };
 
-            await dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig)
+            await dynamoDbContext.GetTargetTable<DataModels.Order>(_getTargetTableConfig)
                 .UpdateItemAsync(
                     updateOrderDocument,
                     _updateItemOperationConfig);
@@ -132,7 +150,7 @@ internal class OrderManagerService(
 
         try
         {
-            await dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig)
+            await dynamoDbContext.GetTargetTable<DataModels.Order>(_getTargetTableConfig)
                 .DeleteItemAsync(
                     orderToDeleteDocument,
                     _deleteItemOperationConfig);
@@ -198,17 +216,17 @@ internal class OrderManagerService(
     /// </exception>
     public async Task PlaceTrade(string symbol, Side side, int amount)
     {
-        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>(dynamoDbOperationConfig).CreateTransactWrite();
-        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>(dynamoDbOperationConfig).CreateTransactWrite();
+        var tradesDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Trade>(_getTargetTableConfig).CreateTransactWrite();
+        var ordersDocumentTransactWrite = dynamoDbContext.GetTargetTable<DataModels.Order>(_getTargetTableConfig).CreateTransactWrite();
 
         var tradeId = Guid.NewGuid().ToString("D");
         tradesDocumentTransactWrite.AddDocumentToPut(dynamoDbContext.ToDocument(new DataModels.Trade(tradeId)
-{
-                Amount = amount,
-                Side = side,
-                Symbol = symbol
-            },
-            dynamoDbOperationConfig));
+        {
+            Amount = amount,
+            Side = side,
+            Symbol = symbol
+        },
+        _toDocumentConfig));
 
         int fulfilledAmount = 0;
 
@@ -232,7 +250,7 @@ internal class OrderManagerService(
                 };
 
                 ordersDocumentTransactWrite.AddDocumentToUpdate(
-                    dynamoDbContext.ToDocument(tradeOrder.Order, dynamoDbOperationConfig),
+                    dynamoDbContext.ToDocument(tradeOrder.Order, _toDocumentConfig),
                     updateConfig);
             }
             else
@@ -250,7 +268,7 @@ internal class OrderManagerService(
                 };
 
                 ordersDocumentTransactWrite.AddItemToDelete(
-                    dynamoDbContext.ToDocument(tradeOrder.Order, dynamoDbOperationConfig),
+                    dynamoDbContext.ToDocument(tradeOrder.Order, _toDocumentConfig),
                     deleteConfig);
             }
         }
@@ -277,11 +295,10 @@ internal class OrderManagerService(
         var orderQuery =
             dynamoDbContext.QueryAsync<DataModels.Order>(
                 $"{symbol}#{side}",
-                new DynamoDBOperationConfig
+                new QueryConfig
                 {
-                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
                     OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
-                    SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck,
+                    TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
                     // The best Buy price is the one of the order with the smallest price in the book -> traverse the index forward
                     // The best Sell price is the one of the order with the highest price in the book -> traverse the index backward
                     BackwardQuery = side == Side.Sell,

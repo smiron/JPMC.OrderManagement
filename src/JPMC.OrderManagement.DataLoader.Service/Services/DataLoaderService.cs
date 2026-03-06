@@ -42,7 +42,12 @@ internal class DataLoaderService(
 
         var orderLines = csvReader.GetRecordsAsync<OrderLine>();
 
-        var batchWrite = dynamoDbContext.CreateBatchWrite<Order>(dynamoDbOperationConfig);
+        var batchWrite = dynamoDbContext.CreateBatchWrite<Order>(new BatchWriteConfig
+        {
+            OverrideTableName = dynamoDbOperationConfig.OverrideTableName,
+            TableNamePrefix = dynamoDbOperationConfig.TableNamePrefix,
+            SkipVersionCheck = dynamoDbOperationConfig.SkipVersionCheck
+        });
 
         // TODO: there might be a significant amount of data in the CSV file. We need to limit the maximum number of records we add to a batch
         int orderLineCount = 0;
