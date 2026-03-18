@@ -35,7 +35,7 @@
 	<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
 	<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.3" />
 	<PackageReference Include="NSwag.AspNetCore" Version="14.6.3" />
-	<PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.15" />
+	<PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.15.2" />
   </ItemGroup>
 
   <ItemGroup>
