@@ -8,12 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Amazon.CDK.Lib" Version="2.241.0" />
-	<PackageReference Include="Constructs" Version="10.5.1" />
-	<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.3" />
-	<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
-	<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.3" />
-	<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.3" />
+	<PackageReference Include="Amazon.CDK.Lib" Version="2.248.0" />
+	<PackageReference Include="Constructs" Version="10.6.0" />
+	<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.5" />
+	<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.5" />
+	<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.5" />
+	<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.5" />
   </ItemGroup>
 
   <ItemGroup>
